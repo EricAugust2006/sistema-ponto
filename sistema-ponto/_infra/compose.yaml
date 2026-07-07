@@ -1,0 +1,10 @@
+services:
+      database:
+        container_name: sistema-ponto-database
+        image: postgres:18-alpine
+
+      env_file:
+        - .env.development
+
+      ports: 
+        - "5432:5432"
