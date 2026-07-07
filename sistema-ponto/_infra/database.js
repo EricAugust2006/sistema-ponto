@@ -28,4 +28,5 @@ async function getNewClient() {
   return client;
 }
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default { query, getNewClient };

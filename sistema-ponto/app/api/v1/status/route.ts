@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 // - limites configurados da aplicação (ex: conexões, requisições)
 // - outras métricas básicas para monitoramento e diagnóstico
 
-export async function GET(request: NextRequest, response: NextResponse) {
+export async function GET(req: NextRequest) {
   const updatedAt = new Date().toISOString();
 
   return NextResponse.json(
