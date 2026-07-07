@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-export function POST(req: NextRequest, res: NextResponse) {
+export function POST(req: NextRequest) {
   // Aqui eu vou registrar a batida de ponto do funcionário.
   // Para isso, preciso obter as seguintes informações:
   //
