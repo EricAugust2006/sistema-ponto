@@ -1,7 +1,7 @@
 export default function Home() {
+  //passo 1: 
+  // 
 
-
-  
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-zinc-900">
       <header className="flex w-full items-center justify-between border-b border-gray-300 bg-gradient-to-b from-zinc-200 p-4 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit">
