@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     // Nome do banco definido nas variáveis de ambiente.
     const databaseName = process.env.POSTGRES_DB;
-
+    console.log(databaseName);
     // Conta quantas conexões estão abertas para este banco.
     const databaseOpenedConnectionsResult = await database.query({
       text: "SELECT count(*)::int FROM pg_stat_activity WHERE datname = $1",
@@ -49,11 +49,13 @@ export async function GET(req: NextRequest) {
       {
         status: "health",
         updated_at: updatedAt,
-        database: {
-          sum: res.rows[0].sum,
-          version: databaseVersionValue,
-          max_connections: databaseMaxConnectionsValue,
-          opened_connections: databaseOpenedConnectionsValue,
+        dependencies: {
+          database: {
+            sum: res.rows[0].sum,
+            version: databaseVersionValue,
+            max_connections: parseInt(databaseMaxConnectionsValue),
+            opened_connections: databaseOpenedConnectionsValue,
+          },
         },
       },
       { status: 200 },

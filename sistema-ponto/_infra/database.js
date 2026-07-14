@@ -1,5 +1,4 @@
 import { Client } from "pg";
-import "dotenv/config";
 
 async function query(queryObject) {
   let client;
@@ -21,7 +20,7 @@ async function getNewClient() {
     port: process.env.POSTGRES_PORT,
     user: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
-    database: process.env.POSTGRES_DATABASE,
+    database: process.env.POSTGRES_DB,
   });
 
   await client.connect();
