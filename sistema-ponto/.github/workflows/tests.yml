@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sistema_ponto
+        ports:
+          - 5432:5432
+          options: >-
+            --health-cmd pg-isready
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 5
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sistema_ponto
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sistema_ponto
+
+    steps:
+      - name: Checkout Codigo
+        users: actions/checkout@4
+
+      - name: Configurar Node.js
+        users:  actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+      
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar migrations pendentes
+        run: npm run migration:up
+
+      - name: Rodar next dev + testes
+        run: npx concurrently --names next,jest --hide next -k --success command-jest "next dev" "jest --runInBand"
