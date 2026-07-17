@@ -31,6 +31,10 @@ jobs:
       POSTGRES_DB: sistema_ponto
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sistema_ponto
 
+    defaults:
+      run:
+        working-directory: sistema-ponto
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -40,6 +44,7 @@ jobs:
         with:
           node-version: 22
           cache: "npm"
+          cache-dependency-path: sistema-ponto/package-lock.json
 
       - name: Instalar dependências
         run: npm ci
