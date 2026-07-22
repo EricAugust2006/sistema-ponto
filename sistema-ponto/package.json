@@ -19,13 +19,16 @@
     "wait-for-postgres": "node _infra/scripts/wait-for-postgres.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "next": "16.2.9",
     "pg": "^8.22.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
