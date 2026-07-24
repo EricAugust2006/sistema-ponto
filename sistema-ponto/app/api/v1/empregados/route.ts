@@ -16,6 +16,7 @@ const criarEmpregadosSchema = z.object({
 type CriarEmpregadoBody = z.infer<typeof criarEmpregadosSchema>;
 
 export async function POST(req: NextRequest) {
+  //esse raw body é o corpo da requisição, que vem em json, e a gente vai tentar parsear ele pra json
   //esse ra
   let rawBody: unknown;
 
@@ -81,6 +82,8 @@ export async function POST(req: NextRequest) {
 
 function identificarCampoDuplicado(error: any): string {
   // error.detail costuma vir como: 'Key (email)=(x@x.com) already exists.'
+  //detail recebe o valor do error.detail, se não tiver, recebe uma string vazia
+  // se o detail tiver a palavra "email", retorna "e-mail", se tiver "matricula", retorna "matrícula", senão retorna "dado informado"
   const detail: string = error?.detail ?? "";
   if (detail.includes("email")) return "e-mail";
   if (detail.includes("matricula")) return "matrícula";
