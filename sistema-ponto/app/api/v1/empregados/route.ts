@@ -83,7 +83,6 @@ export async function POST(req: NextRequest) {
 function identificarCampoDuplicado(error: any): string {
   // error.detail costuma vir como: 'Key (email)=(x@x.com) already exists.'
   //detail recebe o valor do error.detail, se não tiver, recebe uma string vazia
-  const detail: string = error?.detail ?? "";
   // se o detail tiver a palavra "email", retorna "e-mail", se tiver "matricula", retorna "matrícula", senão retorna "dado informado"
   const detail: string = error?.detail ?? "";
   if (detail.includes("email")) return "e-mail";
