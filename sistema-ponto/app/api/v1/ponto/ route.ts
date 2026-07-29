@@ -1,22 +1,20 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { autenticatorRequisicao } from "@/_infra/auth";
 
 export function POST(req: NextRequest) {
-  // Aqui eu vou registrar a batida de ponto do funcionário.
-  // Para isso, preciso obter as seguintes informações:
-  //
-  // - id do funcionário (ou usuário autenticado pelo token)
-  // - tipo da batida de ponto:
-  //   • entrada
-  //   • saída
-  //   • início do intervalo
-  //   • fim do intervalo
-  // - data e hora exata da batida (gerada pelo servidor)
-  // - endereço IP do dispositivo
-  // - informações do dispositivo (user-agent)
-  // - localização (opcional, se o sistema exigir)
-  //
-  // Com esses dados, o sistema poderá:
-  // - validar se a batida é permitida
-  // - evitar batidas duplicadas
-  // - armazenar o histórico de ponto do
+  const empregado = autenticatorRequisicao(req);
+
+  if (!empregado) {
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
+  }
+
+  //passos pra outro dia
+  // se autenticado, ler e validar o corpo
+  // usar o await req.json() pra pegar o tipo do ponto
+  // validar os dados com zod? os 4 valores do ponto ex: saida, entrada e tal
+
+  // insetir o registro do ponto aqui
+  // com INSERT INTO pontos e tal tal
+
+  // dps retornar o sucesso
 }
