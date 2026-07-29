@@ -20,7 +20,7 @@ export const up = (pgm) => {
     tipo: {
       type: "text",
       notNull: true,
-      check: "type IN ('entrada', 'saida_almoco', 'retorno_almoco', 'saida'",
+      check: "type IN ('entrada', 'saida_almoco', 'retorno_almoco', 'saida')",
     },
     criado_em: { type: "timestamp", notNull: true, default: pgm.func("now()") },
   });
