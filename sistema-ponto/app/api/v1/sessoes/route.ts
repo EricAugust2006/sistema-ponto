@@ -132,9 +132,13 @@ export async function DELETE(req: NextRequest) {
 
   try {
     await database.query({
+<<<<<<< Updated upstream
       text: `
         DELETE FROM sessoes WHERE token = $1
       `,
+=======
+      text: `DELETE FROM sessoes WHERE token = $1`,
+>>>>>>> Stashed changes
       values: [token],
     });
 
