@@ -17,6 +17,7 @@ export async function autenticatorRequisicao(req: NextRequest) {
         FROM sessoes
         JOIN empregados ON empregados.id = sessoes.empregado_id
         WHERE sessoes.token = $1 AND sessoes.expira_em > NOW()
+        WHERE sessoes.token = $1 AND sessoes.expira_em now()
       `,
       values: [token],
     });
