@@ -117,3 +117,44 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const tokenCookie = req.cookies.get("session_token");
+
+  if (!tokenCookie) {
+    return NextResponse.json(
+      { mensagem: "Nenhuma sessão ativa para encerrar" },
+      { status: 200 },
+    );
+  }
+
+  const token = tokenCookie.value;
+
+  try {
+    await database.query({
+      text: `
+        DELETE FROM sessoes WHERE token = $1
+      `,
+      values: [token],
+    });
+
+    const response = NextResponse.json(
+      { mensagem: "Sessão encerrada com sucesso" },
+      { status: 200 },
+    );
+
+    response.cookies.set("session_token", "", {
+      httpOnly: true,
+      path: "/",
+      expires: new Date(0),
+    });
+
+    return response;
+  } catch (err) {
+    console.error("Erro ao encerrar sessão:", err);
+    return NextResponse.json(
+      { erro: "Erro interno ao encerrar sessão" },
+      { status: 500 },
+    );
+  }
+}
