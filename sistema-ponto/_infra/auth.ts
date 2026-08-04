@@ -1,6 +1,7 @@
 import database from "@/_infra/database";
 import { NextRequest, NextResponse } from "next/server";
 
+//rota para autejnticação
 export async function autenticatorRequisicao(req: NextRequest) {
   const tokenCookie = req.cookies.get("session_token");
 
@@ -15,6 +16,7 @@ export async function autenticatorRequisicao(req: NextRequest) {
         SELECT empregados.id, empregados.nome, empregados.email, empregados.matricula
         FROM sessoes
         JOIN empregados ON empregados.id = sessoes.empregado_id
+        WHERE sessoes.token = $1 AND sessoes.expira_em > NOW()
         WHERE sessoes.token = $1 AND sessoes.expira_em now()
       `,
       values: [token],
