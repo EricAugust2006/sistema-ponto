@@ -1,6 +1,7 @@
 import database from "@/_infra/database";
 import { NextRequest, NextResponse } from "next/server";
 
+//rota para autejnticação
 export async function autenticatorRequisicao(req: NextRequest) {
   const tokenCookie = req.cookies.get("session_token");
 
