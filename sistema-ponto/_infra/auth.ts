@@ -1,5 +1,5 @@
 import database from "@/_infra/database";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 //rota para autejnticação
 export async function autenticatorRequisicao(req: NextRequest) {
@@ -17,7 +17,6 @@ export async function autenticatorRequisicao(req: NextRequest) {
         FROM sessoes
         JOIN empregados ON empregados.id = sessoes.empregado_id
         WHERE sessoes.token = $1 AND sessoes.expira_em > NOW()
-        WHERE sessoes.token = $1 AND sessoes.expira_em now()
       `,
       values: [token],
     });

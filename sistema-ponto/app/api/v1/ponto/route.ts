@@ -34,6 +34,26 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(res.rows[0], { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+    return NextResponse.json({ err: "Dados inválidos" }, { status: 400 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const empregado = await autenticatorRequisicao(req);
+
+  if (!empregado) {
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
+  }
+
+  try {
+    const res = await database.query({
+      text: `
+      SELECT * FROM pontos WHERE empregado_id = $1 ORDER BY criado_em DESC`,
+      values: [empregado.id],
+    });
+
+    return NextResponse.json(res.rows, { status: 200 });
+  } catch (err) {
+    return NextResponse.json({ err: "Erro ao buscar pontos" }, { status: 500 });
   }
 }
