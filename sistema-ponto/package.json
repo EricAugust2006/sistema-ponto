@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "npm run services:up && npm run wait-for-postgres && concurrently --names next,jest --hide next -k --success command-jest 'next dev' 'jest --runInBand'",
+    "test:win": "npm run services:up && npm run wait-for-postgres && concurrently --names next,jest --hide next -k --success command-jest \"next dev\" \"jest --runInBand\"",
     "test:watch": "jest --watch --runInBand",
     "services:up": "docker compose -f _infra/compose.yaml up -d",
     "services:stop": "docker compose -f _infra/compose.yaml stop ",
@@ -39,6 +40,7 @@
     "jest": "^30.4.2",
     "node-pg-migrate": "^8.0.4",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }
