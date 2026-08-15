@@ -9,4 +9,4 @@ const jestConfig = {
   testTimeout: 30000,
 };
 
-module.exports = createJestConfig(jestConfig);
+export default createJestConfig(jestConfig);
