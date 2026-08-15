@@ -14,13 +14,13 @@ async function criarEmpregadoELogar(overrides = {}) {
     ...overrides,
   };
 
-  await fetch("http://localhost:3000/api/v1/empregados", {
+  await fetch("http://127.0.0.1:3000/api/v1/empregados", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(empregadoData),
   });
 
-  const loginRes = await fetch("http://localhost:3000/api/v1/sessoes", {
+  const loginRes = await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -39,7 +39,7 @@ test("GET to /api/v1/ponto with valid session should return 200 and the employee
   const { cookie } = await criarEmpregadoELogar();
 
   // bate um ponto antes de consultar
-  await fetch("http://localhost:3000/api/v1/ponto", {
+  await fetch("http://127.0.0.1:3000/api/v1/ponto", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -48,7 +48,7 @@ test("GET to /api/v1/ponto with valid session should return 200 and the employee
     body: JSON.stringify({ type: "entrada" }),
   });
 
-  const res = await fetch("http://localhost:3000/api/v1/ponto", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
     method: "GET",
     headers: { Cookie: cookie },
   });
@@ -62,7 +62,7 @@ test("GET to /api/v1/ponto with valid session should return 200 and the employee
 });
 
 test("GET to /api/v1/ponto without authentication should return 401", async () => {
-  const res = await fetch("http://localhost:3000/api/v1/ponto", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
     method: "GET",
   });
 
@@ -81,7 +81,7 @@ test("GET to /api/v1/ponto should only return the logged employee's own punches"
   });
 
   // empregadoA bate ponto
-  await fetch("http://localhost:3000/api/v1/ponto", {
+  await fetch("http://127.0.0.1:3000/api/v1/ponto", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -91,7 +91,7 @@ test("GET to /api/v1/ponto should only return the logged employee's own punches"
   });
 
   // empregadob vai consultar os pontos e tem que ta v azio
-  const res = await fetch("http://localhost:3000/api/v1/ponto", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
     method: "GET",
     headers: { Cookie: empregadoB.cookie },
   });

@@ -21,7 +21,7 @@ async function criarEmpregado(overrides = {}) {
   //aqui vou fazer um fetch da rota de criação de empregado, para criar o empregado no banco de dados
   // ai depois vou retornar o empregado criado, para que possamos usar ele nos testes
   //
-  await fetch("http://localhost:3000/api/v1/empregados", {
+  await fetch("http://127.0.0.1:3000/api/v1/empregados", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -35,7 +35,7 @@ async function criarEmpregado(overrides = {}) {
 test("POST to /api/v1/sessoes with correct credentials should return 201 and set cookie", async () => {
   const empregado = await criarEmpregado();
 
-  const res = await fetch("http://localhost:3000/api/v1/sessoes", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -64,7 +64,7 @@ test("POST to /api/v1/sessoes with incorrect credentials should return 401", asy
     matricula: "333333",
   });
 
-  const res = await fetch("http://localhost:3000/api/v1/sessoes", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -77,7 +77,7 @@ test("POST to /api/v1/sessoes with incorrect credentials should return 401", asy
 });
 
 test("POST to /api/v1/sessoes with missing fields should return 400", async () => {
-  const res = await fetch("http://localhost:3000/api/v1/sessoes", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ matricula: "222222" }),

@@ -13,7 +13,7 @@ test("POST to /api/v1/empregados should return 201 and the created empregado", a
     senha: "securepassword",
   };
 
-  const res = await fetch("http://localhost:3000/api/v1/empregados", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/empregados", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -32,7 +32,7 @@ test("POST to /api/v1/empregados should return 201 and the created empregado", a
 });
 
 test("POST to /api/v1/empregados with missing fields should return 400", async () => {
-  const res = await fetch("http://localhost:3000/api/v1/empregados", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/empregados", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -50,7 +50,7 @@ test("POST to /api/v1/empregados with duplicate email should return 409", async 
     senha: "securepassword",
   };
 
-  await fetch("http://localhost:3000/api/v1/empregados", {
+  await fetch("http://127.0.0.1:3000/api/v1/empregados", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -58,7 +58,7 @@ test("POST to /api/v1/empregados with duplicate email should return 409", async 
     body: JSON.stringify(empregadoData),
   });
 
-  const res = await fetch("http://localhost:3000/api/v1/empregados", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/empregados", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -14,7 +14,7 @@ async function criarEmpregadoELogar(overrides = {}) {
     ...overrides,
   };
 
-  const empregadoRes = await fetch("http://localhost:3000/api/v1/empregados", {
+  const empregadoRes = await fetch("http://127.0.0.1:3000/api/v1/empregados", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(empregadoData),
@@ -28,7 +28,7 @@ async function criarEmpregadoELogar(overrides = {}) {
     );
   }
 
-  const loginRes = await fetch("http://localhost:3000/api/v1/sessoes", {
+  const loginRes = await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -50,7 +50,7 @@ async function criarEmpregadoELogar(overrides = {}) {
 test("DELETE to /api/v1/sessoes with valid session should return 200 and clear the session cookie", async () => {
   const { cookie } = await criarEmpregadoELogar();
 
-  const res = await fetch("http://localhost:3000/api/v1/sessoes", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "DELETE",
     headers: {
       Cookie: cookie,
@@ -68,7 +68,7 @@ test("DELETE to /api/v1/sessoes with valid session should return 200 and clear t
 });
 
 test("DELETE to /api/v1/sessoes without session should return 200 (idempotent)", async () => {
-  const res = await fetch("http://localhost:3000/api/v1/sessoes", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "DELETE",
   });
 
@@ -82,7 +82,7 @@ test("token should be invalid for protected routes after logout", async () => {
   });
 
   // aqui faz logout
-  await fetch("http://localhost:3000/api/v1/sessoes", {
+  await fetch("http://127.0.0.1:3000/api/v1/sessoes", {
     method: "DELETE",
     headers: {
       Cookie: cookie,
@@ -90,7 +90,7 @@ test("token should be invalid for protected routes after logout", async () => {
   });
 
   //  aqui tenta usar o msm cookie numa rota protegida
-  const res = await fetch("http://localhost:3000/api/v1/ponto", {
+  const res = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
