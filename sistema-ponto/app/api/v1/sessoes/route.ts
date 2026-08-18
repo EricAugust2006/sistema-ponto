@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import z from "zod";
+import { autenticatorRequisicao } from "@/_infra/auth";
 
 //codigo mei ocnfuso ent vou coemntar
 const criarLoginSchema = z.object({
@@ -154,5 +155,22 @@ export async function DELETE(req: NextRequest) {
       { erro: "Erro interno ao encerrar sessão" },
       { status: 500 },
     );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const empregado = await autenticatorRequisicao(req);
+
+  if (!empregado) {
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
+  }
+
+  try {
+    return NextResponse.json(
+      { mensagem: "Sessão ativa", empregado },
+      { status: 200 },
+    );
+  } catch (err) {
+    console.error("Erro ao verificar sessão:", err);
   }
 }
