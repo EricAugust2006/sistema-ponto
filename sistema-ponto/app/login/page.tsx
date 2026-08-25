@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import z from "zod";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  Fingerprint,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 
 const loginSchema = z.object({
   matricula: z
@@ -21,36 +29,28 @@ export default function LoginPage() {
   const router = useRouter();
   const [erroApi, setErroApi] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
-
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) });
 
   async function onSubmit(data: LoginFormData) {
     setErroApi(null);
     setCarregando(true);
-
     try {
       const res = await fetch("/api/v1/sessoes", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-
       if (!res.ok) {
         const body = await res.json();
-        setErroApi(body.erro ?? "Nao foi possível fazer login");
+        setErroApi(body.erro ?? "Não foi possível fazer login");
         return;
       }
-
       router.push("/ponto");
-    } catch (error) {
+    } catch {
       setErroApi("Erro de conexão. Tente novamente");
     } finally {
       setCarregando(false);
@@ -58,69 +58,142 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-        <h1 className="mb-6 text-center text-2xl font-semibold text-gray-800">
-          Entrar
-        </h1>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label
-              htmlFor="matricula"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Matrícula
-            </label>
-
-            <input
-              id="matricula"
-              type="text"
-              {...register("matricula")}
-              className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none text-black"
-            />
-            {errors.matricula && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.matricula.message}{" "}
+    <main className="min-h-screen bg-background px-5 py-6 text-foreground sm:px-8">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl items-center justify-center">
+        <div className="grid w-full overflow-hidden rounded-3xl border border-border bg-card shadow-[0_24px_80px_-32px_oklch(0.2_0.08_250/0.28)] lg:grid-cols-[1.05fr_0.95fr]">
+          <section className="relative hidden min-h-[620px] flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex xl:p-14">
+            <div className="absolute -right-24 -top-24 size-72 rounded-full border border-primary-foreground/15" />
+            <div className="absolute -bottom-36 -left-24 size-96 rounded-full border border-primary-foreground/10" />
+            <div className="relative flex items-center gap-3 text-sm font-semibold tracking-wide">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-primary-foreground text-primary">
+                <Fingerprint />
+              </span>{" "}
+              PONTO<span className="font-normal opacity-60">/ empresa</span>
+            </div>
+            <div className="relative max-w-md">
+              <p className="mb-5 text-sm font-medium uppercase tracking-[0.2em] text-primary-foreground/60">
+                Gestão simples, todos os dias
               </p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="senha"
-              className="mb-1 block text-sm font-medium text-black"
-            >
-              Senha
-            </label>
-
-            <input
-              id="senha"
-              type="password"
-              {...register("senha")}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-black focus:border-blue-500 focus:outline-none"
-            />
-            {errors.senha && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.senha.message}{" "}
+              <h1 className="text-balance text-5xl font-semibold leading-[1.08] tracking-tight xl:text-6xl">
+                Seu tempo importa. Registre com confiança.
+              </h1>
+              <p className="mt-6 max-w-sm text-base leading-7 text-primary-foreground/70">
+                Uma experiência segura e transparente para acompanhar sua
+                jornada de trabalho.
               </p>
-            )}
-          </div>
-
-          {erroApi && (
-            <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-              {erroApi}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={carregando}
-            className="w-full bg-blue-600 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-          >
-            {carregando ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
+            </div>
+            <div className="relative grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/10 p-4">
+                <Clock3 className="mb-8" />
+                <p className="text-sm text-primary-foreground/65">
+                  Registro rápido
+                </p>
+                <p className="mt-1 font-medium">Em poucos segundos</p>
+              </div>
+              <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/10 p-4">
+                <ShieldCheck className="mb-8" />
+                <p className="text-sm text-primary-foreground/65">Seus dados</p>
+                <p className="mt-1 font-medium">Sempre protegidos</p>
+              </div>
+            </div>
+          </section>
+          <section className="flex min-h-[620px] items-center justify-center p-6 sm:p-12">
+            <div className="w-full max-w-sm">
+              <div className="mb-10 lg:hidden">
+                <div className="flex items-center gap-3 text-sm font-semibold tracking-wide">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                    <Fingerprint />
+                  </span>
+                  PONTO{" "}
+                  <span className="font-normal text-muted-foreground">
+                    / empresa
+                  </span>
+                </div>
+              </div>
+              <div className="mb-8">
+                <p className="mb-3 text-sm font-medium text-primary">
+                  Área do funcionário
+                </p>
+                <h2 className="text-3xl font-semibold tracking-tight">
+                  Bem-vindo de volta
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Entre para registrar e consultar seus horários.
+                </p>
+              </div>
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col gap-5"
+                noValidate
+              >
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="matricula" className="text-sm font-medium">
+                    Matrícula
+                  </label>
+                  <input
+                    id="matricula"
+                    autoComplete="username"
+                    aria-invalid={!!errors.matricula}
+                    {...register("matricula")}
+                    placeholder="Digite sua matrícula"
+                    className="h-12 rounded-xl border border-input bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/15"
+                  />
+                  {errors.matricula && (
+                    <p className="text-xs text-destructive">
+                      {errors.matricula.message}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="senha" className="text-sm font-medium">
+                    Senha
+                  </label>
+                  <input
+                    id="senha"
+                    type="password"
+                    autoComplete="current-password"
+                    aria-invalid={!!errors.senha}
+                    {...register("senha")}
+                    placeholder="Digite sua senha"
+                    className="h-12 rounded-xl border border-input bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/15"
+                  />
+                  {errors.senha && (
+                    <p className="text-xs text-destructive">
+                      {errors.senha.message}
+                    </p>
+                  )}
+                </div>
+                {erroApi && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                  >
+                    {erroApi}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={carregando}
+                  className="mt-2 flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {carregando ? (
+                    <>
+                      <Loader2 className="animate-spin" /> Entrando...
+                    </>
+                  ) : (
+                    <>
+                      Entrar <ArrowRight />
+                    </>
+                  )}
+                </button>
+              </form>
+              <div className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <CheckCircle2 className="text-primary" /> Ambiente exclusivo
+                para colaboradores
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   );

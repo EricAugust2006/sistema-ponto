@@ -5,6 +5,9 @@ import crypto from "crypto";
 import z from "zod";
 import { autenticatorRequisicao } from "@/_infra/auth";
 
+// DOCUMENTAÇÃO FEITA POR I.A PARA FACILITAR
+
+
 //codigo mei ocnfuso ent vou coemntar
 const criarLoginSchema = z.object({
   matricula: z
