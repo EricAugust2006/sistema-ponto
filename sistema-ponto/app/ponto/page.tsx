@@ -6,13 +6,13 @@ import {ArrowLeft, ArrowRight, BriefcaseBusiness, CalendarDays, Check, Clock3, L
 
 type Empregado = { id: number; nome: string; email: string; matricula: string };
 
-
 type Empregado = {
   id: number;
   nome: string;
   email: string;
   matricula: string;
 };
+
 
 type Ponto = {
   id: string;
@@ -126,7 +126,6 @@ function formatarDiaCurto(chave: string) {
   return {
     numero: String(dia).padStart(2, "0"),
     semana: semana.charAt(0).toUpperCase() + semana.slice(1),
-
     semana: diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1),
   };
 }
@@ -162,7 +161,6 @@ export default function PontoPage() {
   async function baterPonto(tipo: string) {
     setErro(null);
     setCarregandoTipo(tipo);
-
   const buscarPontos = useCallback(async () => {
     const res = await fetch("/api/v1/ponto");
     if (res.ok) {
@@ -201,7 +199,6 @@ export default function PontoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: tipo }),
       });
-
       if (!res.ok) {
         const body = await res.json();
         setErro(body.erro ?? "Não foi possível registrar o ponto.");
@@ -210,7 +207,6 @@ export default function PontoPage() {
       await buscarPontos();
     } catch {
 
-
       await buscarPontos();
     } catch (err) {
       setErro("Erro de conexão. Tente novamente.");
@@ -218,7 +214,6 @@ export default function PontoPage() {
       setCarregandoTipo(null);
     }
   }
-
   async function sair() {
     await fetch("/api/v1/sessoes", { method: "DELETE" });
     router.push("/login");
