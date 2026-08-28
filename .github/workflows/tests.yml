@@ -12,6 +12,7 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
+          ADMIN_KEY: 005005005
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: sistema_ponto
