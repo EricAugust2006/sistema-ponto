@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.development" });
+
 import database from "@/_infra/database.js";
 
 async function cleanDatabase() {
