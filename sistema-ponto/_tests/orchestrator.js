@@ -7,6 +7,9 @@ async function cleanDatabase() {
 async function runMigrations() {
   const response = await fetch("http://localhost:3000/api/v1/migrations", {
     method: "POST",
+    headers: {
+      "x-admin-key": process.env.ADMIN_KEY,
+    },
   });
 
   if (!response.ok) {

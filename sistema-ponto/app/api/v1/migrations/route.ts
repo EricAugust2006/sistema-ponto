@@ -8,11 +8,17 @@ async function getMigrationRunner() {
   return migrationRunner;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const keyAdmin = req.headers.get("x-admin-key");
+
+  if (!process.env.ADMIN_KEY || keyAdmin !== process.env.ADMIN_KEY) {
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
+  }
+
   let dbClient;
 
   try {
-    dbClient = await database.getNewClient();
+    dbClient = await database.getClient();
     const migrationRunner = await getMigrationRunner();
 
     const defaultMigrationsOptions: RunnerOption = {
@@ -30,15 +36,20 @@ export async function GET() {
     console.log(err);
     return NextResponse.json({ err: "Internal Server Error" }, { status: 500 });
   } finally {
-    await dbClient?.end();
+    dbClient?.release();
   }
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const keyAdmin = req.headers.get("x-admin-key");
+  if (!process.env.ADMIN_KEY || keyAdmin !== process.env.ADMIN_KEY) {
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
+  }
+
   let dbClient;
 
   try {
-    dbClient = await database.getNewClient();
+    dbClient = await database.getClient();
     const migrationRunner = await getMigrationRunner();
 
     const options: RunnerOption = {
@@ -60,6 +71,6 @@ export async function POST() {
     console.log(err);
     return NextResponse.json({ err: "Internal Server Error" }, { status: 500 });
   } finally {
-    await dbClient?.end();
+    dbClient?.release();
   }
 }

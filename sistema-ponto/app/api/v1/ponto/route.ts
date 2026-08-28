@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { autenticatorRequisicao } from "@/_infra/auth";
 import database from "@/_infra/database.js";
 import z from "zod";
-
-// DOCUMENTAÇÃPO POR I.A PRRA FICAR MAIS FACIL
+import type { PoolClient } from "pg";
 
 const criarPontoSchema = z.object({
   type: z.enum(["entrada", "saida_almoco", "retorno_almoco", "saida"], {
@@ -11,7 +10,7 @@ const criarPontoSchema = z.object({
   }),
 });
 
-const TOLERANCIA_ALMOCO_MINUTOS = 60; // almoço tem que durar exatamente 60min
+const TOLERANCIA_ALMOCO_MINUTOS = 60;
 
 export async function POST(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
@@ -20,30 +19,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
   }
 
+  let client: PoolClient | undefined;
+  let transacaoIniciada = false;
+
   try {
     const rawBody = await req.json();
     const body = criarPontoSchema.parse(rawBody);
 
-    // 1 - impede bater o mesmo tipo duas vezes no mesmo dia
-    const jaExisteResult = await database.query({
+    client = await database.getClient();
+    await client.query("BEGIN");
+    transacaoIniciada = true;
+
+    const jaExisteResult = await client.query({
       text: `
         SELECT id FROM pontos
         WHERE empregado_id = $1
           AND tipo = $2
-          AND criado_em::date = CURRENT_DATE
+          AND data_referencia = CURRENT_DATE
       `,
       values: [empregado.id, body.type],
     });
 
-    if (jaExisteResult.rowCount! > 0) {
+    if ((jaExisteResult.rowCount ?? 0) > 0) {
+      await client.query("ROLLBACK");
+      transacaoIniciada = false;
+
       return NextResponse.json(
-        { erro: `Você já registrou "${body.type}" hoje.` },
+        { erro: "Você já registrou este tipo de ponto hoje." },
         { status: 400 },
       );
     }
 
-    // 2 - insere o ponto
-    const res = await database.query({
+    const res = await client.query({
       text: `
         INSERT INTO pontos (empregado_id, tipo)
         VALUES ($1, $2)
@@ -54,14 +61,36 @@ export async function POST(req: NextRequest) {
 
     const pontoCriado = res.rows[0];
 
-    // 3 - se foi a "saída", o dia fechou: calcula o banco de horas
     if (body.type === "saida") {
-      await calcularEBaterBancoDeHoras(empregado.id);
+      await calcularEBaterBancoDeHoras(empregado.id, client);
     }
+
+    await client.query("COMMIT");
+    transacaoIniciada = false;
 
     return NextResponse.json(pontoCriado, { status: 201 });
   } catch (err) {
+    if (transacaoIniciada && client) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error("Erro ao desfazer transação:", rollbackError);
+      }
+    }
+
     console.error("Erro ao registrar ponto:", err);
+
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code === "23505"
+    ) {
+      return NextResponse.json(
+        { erro: "Você já registrou este tipo de ponto hoje." },
+        { status: 400 },
+      );
+    }
 
     if (err instanceof z.ZodError) {
       return NextResponse.json(
@@ -74,20 +103,24 @@ export async function POST(req: NextRequest) {
       { erro: "Erro interno do servidor" },
       { status: 500 },
     );
+  } finally {
+    client?.release();
   }
 }
 
-async function calcularEBaterBancoDeHoras(empregadoId: number) {
-  // busca os 4 pontos do dia + o horário esperado do empregado
+async function calcularEBaterBancoDeHoras(
+  empregadoId: number,
+  client: PoolClient,
+) {
   const [pontosResult, empregadoResult] = await Promise.all([
-    database.query({
+    client.query({
       text: `
         SELECT tipo, criado_em FROM pontos
-        WHERE empregado_id = $1 AND criado_em::date = CURRENT_DATE
+        WHERE empregado_id = $1 AND data_referencia = CURRENT_DATE
       `,
       values: [empregadoId],
     }),
-    database.query({
+    client.query({
       text: `SELECT horario_entrada, horario_saida FROM empregados WHERE id = $1`,
       values: [empregadoId],
     }),
@@ -106,7 +139,6 @@ async function calcularEBaterBancoDeHoras(empregadoId: number) {
   const retornoAlmoco = horarioDe("retorno_almoco");
   const saida = horarioDe("saida");
 
-  // sem os 4 pontos, não dá pra calcular corretamente
   if (!entrada || !saidaAlmoco || !retornoAlmoco || !saida) {
     return;
   }
@@ -114,29 +146,22 @@ async function calcularEBaterBancoDeHoras(empregadoId: number) {
   const detalhes: Record<string, number> = {};
   let saldoTotalMinutos = 0;
 
-  // duração real do almoço vs o esperado (60min)
   const duracaoAlmocoMinutos = diferencaEmMinutos(saidaAlmoco, retornoAlmoco);
   const desvioAlmoco = TOLERANCIA_ALMOCO_MINUTOS - duracaoAlmocoMinutos;
-  // se almoçou mais que 60min, desvioAlmoco é negativo (deve horas)
-  // se almoçou menos que 60min, desvioAlmoco é positivo (empresa deve)
   detalhes.desvio_almoco_minutos = desvioAlmoco;
   saldoTotalMinutos += desvioAlmoco;
 
-  // horário de entrada vs esperado
   const entradaEsperada = combinarDataComHorario(entrada, horario_entrada);
   const desvioEntrada = diferencaEmMinutos(entrada, entradaEsperada);
-  // entrou depois do esperado = negativo (deve horas); entrou antes = positivo
   detalhes.desvio_entrada_minutos = desvioEntrada;
   saldoTotalMinutos += desvioEntrada;
 
-  // horário de saída vs esperado
   const saidaEsperada = combinarDataComHorario(saida, horario_saida);
   const desvioSaida = diferencaEmMinutos(saidaEsperada, saida);
-  // saiu depois do esperado = positivo (empresa deve); saiu antes = negativo
   detalhes.desvio_saida_minutos = desvioSaida;
   saldoTotalMinutos += desvioSaida;
 
-  await database.query({
+  await client.query({
     text: `
       INSERT INTO banco_horas (empregado_id, data, saldo_minutos, detalhes)
       VALUES ($1, CURRENT_DATE, $2, $3)
@@ -147,12 +172,10 @@ async function calcularEBaterBancoDeHoras(empregadoId: number) {
   });
 }
 
-// diferença em minutos entre duas datas (b - a)
 function diferencaEmMinutos(a: Date, b: Date) {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000);
 }
 
-// pega a data de "referencia" e substitui só o horário (HH:MM:SS) pelo esperado
 function combinarDataComHorario(referencia: Date, horario: string) {
   const [h, m, s] = horario.split(":").map(Number);
   const data = new Date(referencia);
@@ -170,12 +193,15 @@ export async function GET(req: NextRequest) {
   try {
     const res = await database.query({
       text: `
-      SELECT * FROM pontos WHERE empregado_id = $1 ORDER BY criado_em DESC`,
+        SELECT * FROM pontos
+        WHERE empregado_id = $1
+        ORDER BY criado_em DESC
+      `,
       values: [empregado.id],
     });
 
     return NextResponse.json(res.rows, { status: 200 });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ err: "Erro ao buscar pontos" }, { status: 500 });
   }
 }

@@ -8,6 +8,9 @@ async function cleanDatabase() {
 test("POST to /api/v1/migrations should return 200 and 201", async () => {
   const response1 = await fetch("http://127.0.0.1:3000/api/v1/migrations", {
     method: "POST",
+    headers: {
+      "x-admin-key": process.env.ADMIN_KEY,
+    },
   });
   expect(response1.status).toBe(201);
   const response1Body = await response1.json();
@@ -16,6 +19,9 @@ test("POST to /api/v1/migrations should return 200 and 201", async () => {
 
   const response2 = await fetch("http://127.0.0.1:3000/api/v1/migrations", {
     method: "POST",
+    headers: {
+      "x-admin-key": process.env.ADMIN_KEY,
+    },
   });
   expect(response2.status).toBe(200);
   const response2Body = await response2.json();

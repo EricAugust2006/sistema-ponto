@@ -10,16 +10,41 @@ export async function autenticatorRequisicao(req: NextRequest) {
   }
 
   const token = tokenCookie.value;
+
   try {
+
+    // aqui ele atualiza a sessao para 30 minutos
+    // e retorna os dados do empregado que tem aquela sessao
+
+    //   const res = await database.query({
+    //     text: `
+    //   UPDATE sessoes
+    //   SET expira_em = NOW() + INTERVAL '30 minutes'
+    //   FROM empregados
+    //   WHERE sessoes.token = $1
+    //     AND sessoes.expira_em > NOW()
+    //     AND empregados.id = sessoes.empregado_id
+    //   RETURNING
+    //     empregados.id,
+    //     empregados.nome,
+    //     empregados.email,
+    //     empregados.matricula,
+    //     empregados.papel
+    // `,
+    //     values: [token],
+    //   });
+
+
+    // aqui ele só verifica se a sessão é valida
     const res = await database.query({
       text: `
-        SELECT empregados.id, empregados.nome, empregados.email, empregados.matricula
-        FROM sessoes
-        JOIN empregados ON empregados.id = sessoes.empregado_id
-        WHERE sessoes.token = $1 AND sessoes.expira_em > NOW()
+      SELECT empregados.id, empregados.nome, empregados.email, empregados.matricula, empregados.papel
+      FROM sessoes
+      JOIN empregados ON empregados.id = sessoes.empregado_id
+      WHERE sessoes.token = $1 AND sessoes.expira_em > NOW()
       `,
-      values: [token],
-    });
+      values: [token]
+    })
 
     if (res.rowCount === 0) {
       return null;

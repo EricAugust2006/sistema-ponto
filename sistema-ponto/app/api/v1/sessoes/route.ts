@@ -7,7 +7,6 @@ import { autenticatorRequisicao } from "@/_infra/auth";
 
 // DOCUMENTAÇÃO FEITA POR I.A PARA FACILITAR
 
-
 //codigo mei ocnfuso ent vou coemntar
 const criarLoginSchema = z.object({
   matricula: z
@@ -82,15 +81,16 @@ export async function POST(req: NextRequest) {
     const token = crypto.randomBytes(32).toString("hex");
 
     // 7 - quanto tempo o token vai expirar
-    // a partir de 8h
-    const expiraEm = new Date(Date.now() + 8 * 60 * 60 * 1000);
+    // a partir de 30 minutos
+    // const expiraEm = new Date(Date.now() + 30 * 60 * 1000);
 
     // 8 - salvar o token no banco de dados
     await database.query({
       text: `
       INSERT INTO sessoes (token, empregado_id, expira_em)
-      VALUES ($1, $2, $3)`,
-      values: [token, empregado.id, expiraEm],
+      VALUES ($1, $2, NOW() + INTERVAL '30 minutes')
+      `,
+      values: [token, empregado.id],
     });
 
     // 9 - montar a resposta e setar o cookie
@@ -106,7 +106,9 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set("session_token", token, {
       httpOnly: true,
-      expires: expiraEm,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      // expires: expiraEm,
       path: "/",
     });
 
