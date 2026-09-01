@@ -1,109 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import z from "zod";
 import { autenticatorRequisicao } from "@/_infra/auth";
 import database from "@/_infra/database.js";
-
-const tiposDePonto = [
-  "entrada",
-  "saida_almoco",
-  "retorno_almoco",
-  "saida",
-] as const;
+import { tentarFecharDia } from "@/app/api/v1/ponto/route";
+import z from "zod";
+import type { PoolClient } from "pg";
 
 const criarJustificativaSchema = z.object({
-  data: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")
-    .refine(
-      (data) => !Number.isNaN(Date.parse(`${data}T00:00:00Z`)),
-      "Data inválida",
-    ),
-  tipoPonto: z.enum(tiposDePonto),
-  motivo: z.string().trim().min(10, "Explique o motivo da ausência").max(500),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data em formato inválido (YYYY-MM-DD)"),
+  tipoPonto: z.enum(["entrada", "saida_almoco", "retorno_almoco", "saida"], {
+    message: "Tipo de ponto inválido",
+  }),
+  motivo: z.string().min(10, "O motivo deve ter pelo menos 10 caracteres"),
 });
 
-const analisarJustificativaSchema = z.object({
-  id: z.number().int().positive(),
+const atualizarJustificativaSchema = z.object({
+  id: z.number(),
   status: z.enum(["aprovada", "recusada"]),
-  observacao: z.string().trim().max(500).optional(),
+  observacao: z.string().optional(),
 });
-
-function podeAnalisar(papel: string) {
-  return papel === "admin" || papel === "gestor";
-}
-
-export async function GET(req: NextRequest) {
-  const empregado = await autenticatorRequisicao(req);
-
-  if (!empregado) {
-    return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
-  }
-
-  const gestor = podeAnalisar(empregado.papel);
-  const res = await database.query({
-    text: `
-      SELECT
-        justificativas_ponto.*,
-        empregados.nome AS empregado_nome,
-        analista.nome AS analisado_por_nome
-      FROM justificativas_ponto
-      JOIN empregados ON empregados.id = justificativas_ponto.empregado_id
-      LEFT JOIN empregados AS analista
-        ON analista.id = justificativas_ponto.analisado_por
-      WHERE ($1::boolean = true OR justificativas_ponto.empregado_id = $2)
-      ORDER BY
-        CASE justificativas_ponto.status WHEN 'pendente' THEN 0 ELSE 1 END,
-        justificativas_ponto.criado_em DESC
-    `,
-    values: [gestor, empregado.id],
-  });
-
-  return NextResponse.json(res.rows, { status: 200 });
-}
 
 export async function POST(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
-
   if (!empregado) {
-    return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
   }
 
   try {
-    const body = criarJustificativaSchema.parse(await req.json());
+    const rawBody = await req.json();
+    const body = criarJustificativaSchema.parse(rawBody);
 
-    const dataFutura = await database.query({
-      text: "SELECT $1::date > CURRENT_DATE AS eh_futura",
-      values: [body.data],
-    });
-
-    if (dataFutura.rows[0].eh_futura) {
+    const hoje = new Date().toISOString().split("T")[0];
+    if (body.data > hoje) {
       return NextResponse.json(
-        { erro: "Não é possível justificar um ponto futuro." },
-        { status: 400 },
+        { erro: "Não é possível criar justificativa para datas futuras." },
+        { status: 400 }
       );
     }
 
     const pontoExistente = await database.query({
-      text: `
-        SELECT id FROM pontos
-        WHERE empregado_id = $1
-          AND tipo = $2
-          AND data_referencia = $3::date
-      `,
-      values: [empregado.id, body.tipoPonto, body.data],
+      text: `SELECT id FROM pontos WHERE empregado_id = $1 AND data_referencia = $2 AND tipo = $3`,
+      values: [empregado.id, body.data, body.tipoPonto],
     });
 
-    if ((pontoExistente.rowCount ?? 0) > 0) {
+    if (pontoExistente.rows.length > 0) {
       return NextResponse.json(
-        { erro: "Esse ponto já foi registrado e não precisa de justificativa." },
-        { status: 400 },
+        { erro: "Este ponto já foi registrado e não necessita de justificativa." },
+        { status: 400 }
       );
     }
 
     const res = await database.query({
       text: `
         INSERT INTO justificativas_ponto (empregado_id, data, tipo_ponto, motivo)
-        VALUES ($1, $2::date, $3, $4)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (empregado_id, data, tipo_ponto) 
+        DO UPDATE SET motivo = EXCLUDED.motivo, status = 'pendente'
         RETURNING *
       `,
       values: [empregado.id, body.data, body.tipoPonto, body.motivo],
@@ -114,72 +65,79 @@ export async function POST(req: NextRequest) {
     if (err instanceof z.ZodError) {
       return NextResponse.json(
         { erro: "Dados inválidos", detalhes: err.flatten().fieldErrors },
-        { status: 400 },
+        { status: 400 }
       );
     }
-
-    if (err && typeof err === "object" && "code" in err && err.code === "23505") {
-      return NextResponse.json(
-        { erro: "Já existe uma justificativa para este ponto." },
-        { status: 409 },
-      );
-    }
-
     console.error("Erro ao criar justificativa:", err);
-    return NextResponse.json(
-      { erro: "Erro interno do servidor" },
-      { status: 500 },
-    );
+    return NextResponse.json({ erro: "Erro interno do servidor" }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const empregado = await autenticatorRequisicao(req);
+  if (!empregado) {
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
+  }
+
+  try {
+    const eGestorOuAdmin = empregado.papel === "gestor" || empregado.papel === "admin";
+    const query = eGestorOuAdmin
+      ? `SELECT j.*, e.nome as empregado_nome, e.matricula FROM justificativas_ponto j JOIN empregados e ON j.empregado_id = e.id ORDER BY j.criado_em DESC`
+      : `SELECT * FROM justificativas_ponto WHERE empregado_id = $1 ORDER BY criado_em DESC`;
+    const values = eGestorOuAdmin ? [] : [empregado.id];
+
+    const res = await database.query({ text: query, values });
+    return NextResponse.json(res.rows, { status: 200 });
+  } catch (err) {
+    console.error("Erro ao listar justificativas:", err);
+    return NextResponse.json({ erro: "Erro ao buscar justificativas" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
-
-  if (!empregado) {
-    return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
+  if (!empregado || (empregado.papel !== "gestor" && empregado.papel !== "admin")) {
+    return NextResponse.json({ erro: "Acesso negado. Apenas gestores ou administradores." }, { status: 403 });
   }
 
-  if (!podeAnalisar(empregado.papel)) {
-    return NextResponse.json({ erro: "Acesso restrito" }, { status: 403 });
-  }
-
+  let client: PoolClient | undefined;
   try {
-    const body = analisarJustificativaSchema.parse(await req.json());
-    const res = await database.query({
+    const rawBody = await req.json();
+    const body = atualizarJustificativaSchema.parse(rawBody);
+
+    client = await database.getClient();
+    await client.query("BEGIN");
+
+    const resJust = await client.query({
       text: `
-        UPDATE justificativas_ponto
-        SET
-          status = $1,
-          analisado_por = $2,
-          observacao_analise = $3,
-          analisado_em = NOW()
-        WHERE id = $4 AND status = 'pendente'
+        UPDATE justificativas_ponto 
+        SET status = $1, observacao = $2, analisado_por = $3, atualizado_em = NOW()
+        WHERE id = $4
         RETURNING *
       `,
-      values: [body.status, empregado.id, body.observacao ?? null, body.id],
+      values: [body.status, body.observacao ?? null, empregado.id, body.id],
     });
 
-    if ((res.rowCount ?? 0) === 0) {
-      return NextResponse.json(
-        { erro: "Justificativa não encontrada ou já analisada." },
-        { status: 404 },
-      );
+    if (resJust.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return NextResponse.json({ erro: "Justificativa não encontrada" }, { status: 404 });
     }
 
-    return NextResponse.json(res.rows[0], { status: 200 });
+    const justificativa = resJust.rows[0];
+
+    // Recalcula o banco de horas do colaborador para o dia ajustado
+    await tentarFecharDia(justificativa.empregado_id, justificativa.data, client);
+
+    await client.query("COMMIT");
+    return NextResponse.json(justificativa, { status: 200 });
   } catch (err) {
+    if (client) await client.query("ROLLBACK");
     if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { erro: "Dados inválidos", detalhes: err.flatten().fieldErrors },
-        { status: 400 },
-      );
+      return NextResponse.json({ erro: "Dados inválidos", detalhes: err.flatten().fieldErrors }, { status: 400 });
     }
-
-    console.error("Erro ao analisar justificativa:", err);
-    return NextResponse.json(
-      { erro: "Erro interno do servidor" },
-      { status: 500 },
-    );
+    console.error("Erro ao atualizar justificativa:", err);
+    return NextResponse.json({ erro: "Erro interno ao atualizar justificativa" }, { status: 500 });
+  } finally {
+    client?.release();
   }
 }
