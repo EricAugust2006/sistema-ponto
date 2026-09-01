@@ -50,24 +50,28 @@ const TIPOS_PONTO = [
     valor: "entrada" as const,
     rotulo: "Entrada",
     detalhe: "Início da jornada",
+    esperaTexto: "Aguardando início",
     Icon: BriefcaseBusiness,
   },
   {
     valor: "saida_almoco" as const,
     rotulo: "Saída almoço",
     detalhe: "Pausa para almoço",
+    esperaTexto: "Aguarde a Entrada",
     Icon: Utensils,
   },
   {
     valor: "retorno_almoco" as const,
     rotulo: "Volta almoço",
     detalhe: "Retorno da pausa",
+    esperaTexto: "Aguarde Saída almoço",
     Icon: Timer,
   },
   {
     valor: "saida" as const,
     rotulo: "Saída",
     detalhe: "Fim da jornada",
+    esperaTexto: "Aguarde Volta almoço",
     Icon: LogOut,
   },
 ];
@@ -229,8 +233,11 @@ export default function PontoPage() {
         return;
       }
 
-      setSucesso("Ponto registrado com sucesso!");
+      const rotuloAtual =
+        TIPOS_PONTO.find((t) => t.valor === tipo)?.rotulo ?? "Ponto";
+      setSucesso(`${rotuloAtual} registrado com sucesso!`);
       await Promise.all([buscarPontos(), buscarBancoHoras()]);
+      setMesSelecionado(chaveDoMes(new Date()));
 
       setTimeout(() => {
         setSucesso(null);
@@ -253,11 +260,20 @@ export default function PontoPage() {
   const agrupados = useMemo(() => agruparPontos(pontos), [pontos]);
 
   const meses = useMemo(() => {
+    const chaves = new Set<string>();
     const hoje = new Date();
-    return Array.from({ length: 12 }, (_, i) => {
-      return chaveDoMes(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1));
-    });
-  }, []);
+    for (let i = 0; i < 12; i++) {
+      chaves.add(
+        chaveDoMes(new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)),
+      );
+    }
+    for (const ponto of pontos) {
+      if (ponto.criado_em) {
+        chaves.add(chaveDoMes(new Date(ponto.criado_em)));
+      }
+    }
+    return Array.from(chaves).sort().reverse();
+  }, [pontos]);
 
   const indiceMes = mesSelecionado ? meses.indexOf(mesSelecionado) : -1;
 
@@ -278,6 +294,15 @@ export default function PontoPage() {
     }
     return mapa;
   }, [pontos]);
+
+  // Próximo ponto permitido na ordem sequencial da jornada
+  const proximoTipoPermitido = useMemo(() => {
+    if (!pontosHoje.has("entrada")) return "entrada";
+    if (!pontosHoje.has("saida_almoco")) return "saida_almoco";
+    if (!pontosHoje.has("retorno_almoco")) return "retorno_almoco";
+    if (!pontosHoje.has("saida")) return "saida";
+    return null;
+  }, [pontosHoje]);
 
   if (carregandoPagina) {
     return (
@@ -457,53 +482,76 @@ export default function PontoPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {TIPOS_PONTO.map(({ valor, rotulo, detalhe, Icon }) => {
-              const pontoHoje = pontosHoje.get(valor);
-              const jaRegistrado = !!pontoHoje;
-              const estaCarregando = carregandoTipo === valor;
+            {TIPOS_PONTO.map(
+              ({ valor, rotulo, detalhe, esperaTexto, Icon }) => {
+                const pontoHoje = pontosHoje.get(valor);
+                const jaRegistrado = !!pontoHoje;
+                const ehProximo = valor === proximoTipoPermitido;
+                const estaCarregando = carregandoTipo === valor;
+                const desabilitado =
+                  jaRegistrado || !ehProximo || carregandoTipo !== null;
 
-              return (
-                <button
-                  key={valor}
-                  onClick={() => baterPonto(valor)}
-                  disabled={jaRegistrado || carregandoTipo !== null}
-                  className={`group relative flex min-h-32 flex-col justify-between rounded-2xl border p-4 text-left transition-all ${jaRegistrado
-                    ? "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10 cursor-default"
-                    : "border-border bg-card hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 active:translate-y-0"
-                    } disabled:cursor-not-allowed disabled:opacity-80`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`flex size-10 items-center justify-center rounded-xl transition ${jaRegistrado
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                        : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                return (
+                  <button
+                    key={valor}
+                    onClick={() => baterPonto(valor)}
+                    disabled={desabilitado}
+                    className={`group relative flex min-h-32 flex-col justify-between rounded-2xl border p-4 text-left transition-all ${
+                      jaRegistrado
+                        ? "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10 cursor-default"
+                        : ehProximo
+                          ? "border-primary bg-card ring-2 ring-primary/25 shadow-md hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10 active:translate-y-0 cursor-pointer"
+                          : "border-border/60 bg-muted/20 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`flex size-10 items-center justify-center rounded-xl transition ${
+                          jaRegistrado
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            : ehProximo
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted text-muted-foreground"
                         }`}
-                    >
-                      {estaCarregando ? (
-                        <Loader2 className="size-5 animate-spin" />
-                      ) : (
-                        <Icon className="size-5" />
-                      )}
-                    </span>
-
-                    {jaRegistrado && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                        <Check className="size-3" /> Registrado
+                      >
+                        {estaCarregando ? (
+                          <Loader2 className="size-5 animate-spin" />
+                        ) : (
+                          <Icon className="size-5" />
+                        )}
                       </span>
-                    )}
-                  </div>
 
-                  <div className="mt-4">
-                    <span className="block text-sm font-semibold">{rotulo}</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {jaRegistrado
-                        ? `Às ${formatarHorario(pontoHoje.criado_em)}`
-                        : detalhe}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+                      {jaRegistrado ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <Check className="size-3" /> Registrado
+                        </span>
+                      ) : ehProximo ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+                          Próximo
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                          Bloqueado
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4">
+                      <span className="block text-sm font-semibold">
+                        {rotulo}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {jaRegistrado
+                          ? `Às ${formatarHorario(pontoHoje.criado_em)}`
+                          : ehProximo
+                            ? detalhe
+                            : esperaTexto}
+                      </span>
+                    </div>
+                  </button>
+                );
+              },
+            )}
           </div>
         </section>
 

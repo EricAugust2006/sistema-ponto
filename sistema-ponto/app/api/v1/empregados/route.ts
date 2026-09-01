@@ -89,3 +89,24 @@ function identificarCampoDuplicado(error: any): string {
   if (detail.includes("matricula")) return "matrícula";
   return "dado informado";
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const res = await database.query({
+      text: `
+        SELECT id, nome, email, matricula, papel, horario_entrada, horario_saida, criado_em
+        FROM empregados
+        ORDER BY id ASC
+      `,
+    });
+
+    return NextResponse.json(res.rows, { status: 200 });
+  } catch (err) {
+    console.error("Erro ao listar empregados:", err);
+    return NextResponse.json(
+      { erro: "Erro interno ao listar empregados" },
+      { status: 500 },
+    );
+  }
+}
+

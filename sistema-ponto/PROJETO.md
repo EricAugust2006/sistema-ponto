@@ -93,6 +93,7 @@ O endpoint de banco de horas devolve o saldo total do empregado e os registros d
 | Método e rota | Descrição |
 | --- | --- |
 | `POST /api/v1/empregados` | Cadastra um empregado. |
+| `GET /api/v1/empregados` | Lista os empregados cadastrados no banco de dados. |
 | `POST /api/v1/sessoes` | Realiza login e cria a sessão. |
 | `GET /api/v1/sessoes` | Retorna a sessão e o empregado autenticado. |
 | `DELETE /api/v1/sessoes` | Encerra a sessão atual. |

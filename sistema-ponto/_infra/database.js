@@ -18,3 +18,4 @@ async function getClient() {
 }
 
 export default { query, getClient };
+

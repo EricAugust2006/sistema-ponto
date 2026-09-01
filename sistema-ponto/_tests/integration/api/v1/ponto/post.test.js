@@ -101,6 +101,66 @@ test("POST to /api/v1/ponto with invalid type should return 400", async () => {
   expect(res.status).toBe(400);
 });
 
+test("POST to /api/v1/ponto should reject punches out of logical sequence", async () => {
+  const { cookie } = await criarEmpregadoELogar({
+    email: "sequencia.ordem@example.com",
+    matricula: "777999",
+  });
+
+  // Tentar bater saida_almoco sem ter batido entrada
+  const saidaAlmocoSemEntradaRes = await fetch(
+    "http://127.0.0.1:3000/api/v1/ponto",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify({ type: "saida_almoco" }),
+    },
+  );
+  expect(saidaAlmocoSemEntradaRes.status).toBe(400);
+  const saidaAlmocoSemEntradaBody = await saidaAlmocoSemEntradaRes.json();
+  expect(saidaAlmocoSemEntradaBody.erro).toContain("Entrada");
+
+  // Bater entrada com sucesso
+  const entradaRes = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({ type: "entrada" }),
+  });
+  expect(entradaRes.status).toBe(201);
+
+  // Tentar bater saida sem ter batido almoço
+  const saidaDiretaRes = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({ type: "saida" }),
+  });
+  expect(saidaDiretaRes.status).toBe(400);
+
+  // Bater saida_almoco com sucesso
+  const saidaAlmocoRes = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({ type: "saida_almoco" }),
+  });
+  expect(saidaAlmocoRes.status).toBe(201);
+
+  // Bater retorno_almoco com sucesso
+  const retornoAlmocoRes = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({ type: "retorno_almoco" }),
+  });
+  expect(retornoAlmocoRes.status).toBe(201);
+
+  // Bater saida com sucesso
+  const saidaRes = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({ type: "saida" }),
+  });
+  expect(saidaRes.status).toBe(201);
+});
+
 test("POST to /api/v1/ponto without authentication should return 401", async () => {
   const res = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
     method: "POST",

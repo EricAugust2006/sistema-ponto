@@ -30,17 +30,20 @@ export async function POST(req: NextRequest) {
     await client.query("BEGIN");
     transacaoIniciada = true;
 
-    const jaExisteResult = await client.query({
+    const pontosHojeResult = await client.query({
       text: `
-        SELECT id FROM pontos
+        SELECT tipo FROM pontos
         WHERE empregado_id = $1
-          AND tipo = $2
           AND data_referencia = CURRENT_DATE
       `,
-      values: [empregado.id, body.type],
+      values: [empregado.id],
     });
 
-    if ((jaExisteResult.rowCount ?? 0) > 0) {
+    const pontosHojeSet = new Set(
+      pontosHojeResult.rows.map((r: { tipo: string }) => r.tipo),
+    );
+
+    if (pontosHojeSet.has(body.type)) {
       await client.query("ROLLBACK");
       transacaoIniciada = false;
 
@@ -48,6 +51,77 @@ export async function POST(req: NextRequest) {
         { erro: "Você já registrou este tipo de ponto hoje." },
         { status: 400 },
       );
+    }
+
+    // Validação da ordem sequencial obrigatória da jornada
+    if (body.type === "entrada") {
+      if (
+        pontosHojeSet.has("saida_almoco") ||
+        pontosHojeSet.has("retorno_almoco") ||
+        pontosHojeSet.has("saida")
+      ) {
+        await client.query("ROLLBACK");
+        transacaoIniciada = false;
+        return NextResponse.json(
+          {
+            erro: "Não é possível registrar a Entrada após pontos posteriores já terem sido batidos.",
+          },
+          { status: 400 },
+        );
+      }
+    } else if (body.type === "saida_almoco") {
+      if (!pontosHojeSet.has("entrada")) {
+        await client.query("ROLLBACK");
+        transacaoIniciada = false;
+        return NextResponse.json(
+          {
+            erro: "Você precisa registrar a Entrada antes de registrar a Saída para Almoço.",
+          },
+          { status: 400 },
+        );
+      }
+      if (pontosHojeSet.has("retorno_almoco") || pontosHojeSet.has("saida")) {
+        await client.query("ROLLBACK");
+        transacaoIniciada = false;
+        return NextResponse.json(
+          {
+            erro: "Não é possível registrar a Saída para Almoço após pontos posteriores já terem sido batidos.",
+          },
+          { status: 400 },
+        );
+      }
+    } else if (body.type === "retorno_almoco") {
+      if (!pontosHojeSet.has("saida_almoco")) {
+        await client.query("ROLLBACK");
+        transacaoIniciada = false;
+        return NextResponse.json(
+          {
+            erro: "Você precisa registrar a Saída para Almoço antes de registrar o Retorno do Almoço.",
+          },
+          { status: 400 },
+        );
+      }
+      if (pontosHojeSet.has("saida")) {
+        await client.query("ROLLBACK");
+        transacaoIniciada = false;
+        return NextResponse.json(
+          {
+            erro: "Não é possível registrar o Retorno do Almoço após a Saída já ter sido registrada.",
+          },
+          { status: 400 },
+        );
+      }
+    } else if (body.type === "saida") {
+      if (!pontosHojeSet.has("retorno_almoco")) {
+        await client.query("ROLLBACK");
+        transacaoIniciada = false;
+        return NextResponse.json(
+          {
+            erro: "Você precisa registrar o Retorno do Almoço antes de registrar a Saída.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const res = await client.query({
