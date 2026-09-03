@@ -19,6 +19,8 @@ const atualizarJustificativaSchema = z.object({
   observacao: z.string().optional(),
 });
 
+// Empregado envia uma justificativa para um ponto — seja ele ausente
+// (esqueceu de bater) ou já registrado (bateu errado / precisa de correção).
 export async function POST(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
   if (!empregado) {
@@ -29,31 +31,26 @@ export async function POST(req: NextRequest) {
     const rawBody = await req.json();
     const body = criarJustificativaSchema.parse(rawBody);
 
+    // não faz sentido justificar um dia que ainda nem chegou
     const hoje = new Date().toISOString().split("T")[0];
     if (body.data > hoje) {
       return NextResponse.json(
         { erro: "Não é possível criar justificativa para datas futuras." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const pontoExistente = await database.query({
-      text: `SELECT id FROM pontos WHERE empregado_id = $1 AND data_referencia = $2 AND tipo = $3`,
-      values: [empregado.id, body.data, body.tipoPonto],
-    });
+    // Observação: antes bloqueávamos justificativa se o ponto já existia.
+    // Agora permitimos, pois o empregado também pode usar isso para
+    // sinalizar que bateu um ponto errado e precisa de correção/análise.
 
-    if (pontoExistente.rows.length > 0) {
-      return NextResponse.json(
-        { erro: "Este ponto já foi registrado e não necessita de justificativa." },
-        { status: 400 }
-      );
-    }
-
+    // grava a justificativa; se já existir uma para esse empregado/dia/tipo,
+    // atualiza o motivo e volta o status para "pendente" (novo pedido de análise)
     const res = await database.query({
       text: `
         INSERT INTO justificativas_ponto (empregado_id, data, tipo_ponto, motivo)
         VALUES ($1, $2, $3, $4)
-        ON CONFLICT (empregado_id, data, tipo_ponto) 
+        ON CONFLICT (empregado_id, data, tipo_ponto)
         DO UPDATE SET motivo = EXCLUDED.motivo, status = 'pendente'
         RETURNING *
       `,
@@ -65,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (err instanceof z.ZodError) {
       return NextResponse.json(
         { erro: "Dados inválidos", detalhes: err.flatten().fieldErrors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("Erro ao criar justificativa:", err);
@@ -73,6 +70,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Lista justificativas: funcionário vê só as próprias,
+// gestor/admin vê de todo mundo (com nome e matrícula do empregado)
 export async function GET(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
   if (!empregado) {
@@ -94,6 +93,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Gestor/admin aprova ou recusa uma justificativa pendente.
+// Depois de decidir, tentamos fechar/recalcular o dia correspondente,
+// já que a decisão pode liberar (ou não) o cálculo do banco de horas.
 export async function PATCH(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
   if (!empregado || (empregado.papel !== "gestor" && empregado.papel !== "admin")) {
@@ -108,10 +110,12 @@ export async function PATCH(req: NextRequest) {
     client = await database.getClient();
     await client.query("BEGIN");
 
+    // nomes de coluna corretos conforme a migration:
+    // observacao_analise (não "observacao") e analisado_em (não "atualizado_em")
     const resJust = await client.query({
       text: `
-        UPDATE justificativas_ponto 
-        SET status = $1, observacao = $2, analisado_por = $3, atualizado_em = NOW()
+        UPDATE justificativas_ponto
+        SET status = $1, observacao_analise = $2, analisado_por = $3, analisado_em = NOW()
         WHERE id = $4
         RETURNING *
       `,
@@ -125,8 +129,10 @@ export async function PATCH(req: NextRequest) {
 
     const justificativa = resJust.rows[0];
 
-    // Recalcula o banco de horas do colaborador para o dia ajustado
-    await tentarFecharDia(justificativa.empregado_id, justificativa.data, client);
+    // "data" vem do banco como Date; convertemos para "YYYY-MM-DD"
+    // pra reaproveitar a mesma função usada no fechamento do dia atual
+    const dataFormatada = new Date(justificativa.data).toISOString().split("T")[0];
+    await tentarFecharDia(justificativa.empregado_id, dataFormatada, client);
 
     await client.query("COMMIT");
     return NextResponse.json(justificativa, { status: 200 });

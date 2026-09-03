@@ -4,13 +4,14 @@ import database from "@/_infra/database.js";
 import z from "zod";
 import type { PoolClient } from "pg";
 
+const ORDEM_TIPOS = ["entrada", "saida_almoco", "retorno_almoco", "saida"] as const;
+
 const criarPontoSchema = z.object({
-  type: z.enum(["entrada", "saida_almoco", "retorno_almoco", "saida"], {
-    message: "Tipo de ponto inválido",
-  }),
+  type: z.enum(ORDEM_TIPOS, { message: "Tipo de ponto inválido" }),
 });
 
 const TOLERANCIA_ALMOCO_MINUTOS = 60;
+const PENALIDADE_RECUSA_MINUTOS = -60;
 
 export async function POST(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
@@ -33,8 +34,7 @@ export async function POST(req: NextRequest) {
     const pontosHojeResult = await client.query({
       text: `
         SELECT tipo FROM pontos
-        WHERE empregado_id = $1
-          AND data_referencia = CURRENT_DATE
+        WHERE empregado_id = $1 AND data_referencia = CURRENT_DATE
       `,
       values: [empregado.id],
     });
@@ -46,78 +46,40 @@ export async function POST(req: NextRequest) {
     if (pontosHojeSet.has(body.type)) {
       await client.query("ROLLBACK");
       transacaoIniciada = false;
-
       return NextResponse.json(
         { erro: "Você já registrou este tipo de ponto hoje." },
         { status: 400 },
       );
     }
 
-    // Validação da ordem sequencial obrigatória da jornada
-    if (body.type === "entrada") {
-      if (
-        pontosHojeSet.has("saida_almoco") ||
-        pontosHojeSet.has("retorno_almoco") ||
-        pontosHojeSet.has("saida")
-      ) {
+    // Não permite voltar para um tipo que já foi ultrapassado
+    const indiceAtual = ORDEM_TIPOS.indexOf(body.type);
+    const tiposPosteriores = ORDEM_TIPOS.slice(indiceAtual + 1);
+    const foiUltrapassado = tiposPosteriores.some((t) => pontosHojeSet.has(t));
+
+    if (foiUltrapassado) {
+      await client.query("ROLLBACK");
+      transacaoIniciada = false;
+
+      return NextResponse.json(
+        {
+          erro: `Você já registrou um ponto posterior a "${body.type}". Envie uma justificativa para este horário.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // Não permite pular etapas da sequência
+    if (indiceAtual > 0) {
+      const tipoAnterior = ORDEM_TIPOS[indiceAtual - 1];
+
+      if (!pontosHojeSet.has(tipoAnterior)) {
         await client.query("ROLLBACK");
         transacaoIniciada = false;
+
         return NextResponse.json(
           {
-            erro: "Não é possível registrar a Entrada após pontos posteriores já terem sido batidos.",
-          },
-          { status: 400 },
-        );
-      }
-    } else if (body.type === "saida_almoco") {
-      if (!pontosHojeSet.has("entrada")) {
-        await client.query("ROLLBACK");
-        transacaoIniciada = false;
-        return NextResponse.json(
-          {
-            erro: "Você precisa registrar a Entrada antes de registrar a Saída para Almoço.",
-          },
-          { status: 400 },
-        );
-      }
-      if (pontosHojeSet.has("retorno_almoco") || pontosHojeSet.has("saida")) {
-        await client.query("ROLLBACK");
-        transacaoIniciada = false;
-        return NextResponse.json(
-          {
-            erro: "Não é possível registrar a Saída para Almoço após pontos posteriores já terem sido batidos.",
-          },
-          { status: 400 },
-        );
-      }
-    } else if (body.type === "retorno_almoco") {
-      if (!pontosHojeSet.has("saida_almoco")) {
-        await client.query("ROLLBACK");
-        transacaoIniciada = false;
-        return NextResponse.json(
-          {
-            erro: "Você precisa registrar a Saída para Almoço antes de registrar o Retorno do Almoço.",
-          },
-          { status: 400 },
-        );
-      }
-      if (pontosHojeSet.has("saida")) {
-        await client.query("ROLLBACK");
-        transacaoIniciada = false;
-        return NextResponse.json(
-          {
-            erro: "Não é possível registrar o Retorno do Almoço após a Saída já ter sido registrada.",
-          },
-          { status: 400 },
-        );
-      }
-    } else if (body.type === "saida") {
-      if (!pontosHojeSet.has("retorno_almoco")) {
-        await client.query("ROLLBACK");
-        transacaoIniciada = false;
-        return NextResponse.json(
-          {
-            erro: "Você precisa registrar o Retorno do Almoço antes de registrar a Saída.",
+            erro: `Não é possível registrar "${body.type}" sem registrar "${tipoAnterior}" primeiro.`,
           },
           { status: 400 },
         );
@@ -125,18 +87,14 @@ export async function POST(req: NextRequest) {
     }
 
     const res = await client.query({
-      text: `
-        INSERT INTO pontos (empregado_id, tipo)
-        VALUES ($1, $2)
-        RETURNING *
-      `,
+      text: `INSERT INTO pontos (empregado_id, tipo) VALUES ($1, $2) RETURNING *`,
       values: [empregado.id, body.type],
     });
 
     const pontoCriado = res.rows[0];
 
     if (body.type === "saida") {
-      await calcularEBaterBancoDeHoras(empregado.id, client);
+      await tentarFecharDia(empregado.id, "CURRENT_DATE", client);
     }
 
     await client.query("COMMIT");
@@ -154,12 +112,7 @@ export async function POST(req: NextRequest) {
 
     console.error("Erro ao registrar ponto:", err);
 
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      err.code === "23505"
-    ) {
+    if (err && typeof err === "object" && "code" in err && err.code === "23505") {
       return NextResponse.json(
         { erro: "Você já registrou este tipo de ponto hoje." },
         { status: 400 },
@@ -173,76 +126,110 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      { erro: "Erro interno do servidor" },
-      { status: 500 },
-    );
+    return NextResponse.json({ erro: "Erro interno do servidor" }, { status: 500 });
   } finally {
     client?.release();
   }
 }
 
-async function calcularEBaterBancoDeHoras(
+// Tenta calcular e gravar o banco de horas de um dia específico do empregado.
+// dataRef pode ser "CURRENT_DATE" (literal SQL) ou uma string "YYYY-MM-DD".
+export async function tentarFecharDia(
   empregadoId: number,
+  dataRef: string,
   client: PoolClient,
 ) {
-  const [pontosResult, empregadoResult] = await Promise.all([
+  const dataExpr = dataRef === "CURRENT_DATE" ? "CURRENT_DATE" : "$2::date";
+  const valuesPontos =
+    dataRef === "CURRENT_DATE" ? [empregadoId] : [empregadoId, dataRef];
+
+  const [pontosResult, empregadoResult, justificativasResult] = await Promise.all([
     client.query({
-      text: `
-        SELECT tipo, criado_em FROM pontos
-        WHERE empregado_id = $1 AND data_referencia = CURRENT_DATE
-      `,
-      values: [empregadoId],
+      text: `SELECT tipo, criado_em FROM pontos WHERE empregado_id = $1 AND data_referencia = ${dataExpr}`,
+      values: valuesPontos,
     }),
     client.query({
       text: `SELECT horario_entrada, horario_saida FROM empregados WHERE id = $1`,
       values: [empregadoId],
     }),
+    client.query({
+      text: `SELECT tipo_ponto, status FROM justificativas_ponto WHERE empregado_id = $1 AND data = ${dataExpr}`,
+      values: valuesPontos,
+    }),
   ]);
 
   const pontosDoDia = pontosResult.rows;
   const { horario_entrada, horario_saida } = empregadoResult.rows[0];
+  const justificativas = justificativasResult.rows;
 
   const horarioDe = (tipo: string) =>
-    pontosDoDia.find((p: { tipo: string }) => p.tipo === tipo)?.criado_em as
-      | Date
-      | undefined;
+    pontosDoDia.find((p: { tipo: string }) => p.tipo === tipo)?.criado_em as Date | undefined;
+
+  const justificativaDe = (tipo: string) =>
+    justificativas.find((j: { tipo_ponto: string }) => j.tipo_ponto === tipo) as
+    | { status: string }
+    | undefined;
+
+  // confirma se todos os 4 tipos estão resolvidos (batidos ou já justificados)
+  for (const tipo of ORDEM_TIPOS) {
+    if (horarioDe(tipo)) continue;
+    const j = justificativaDe(tipo);
+    if (!j || j.status === "pendente") {
+      return; // ainda falta resolver esse tipo, dia continua em aberto
+    }
+  }
 
   const entrada = horarioDe("entrada");
   const saidaAlmoco = horarioDe("saida_almoco");
   const retornoAlmoco = horarioDe("retorno_almoco");
   const saida = horarioDe("saida");
 
-  if (!entrada || !saidaAlmoco || !retornoAlmoco || !saida) {
-    return;
-  }
-
   const detalhes: Record<string, number> = {};
   let saldoTotalMinutos = 0;
 
-  const duracaoAlmocoMinutos = diferencaEmMinutos(saidaAlmoco, retornoAlmoco);
-  const desvioAlmoco = TOLERANCIA_ALMOCO_MINUTOS - duracaoAlmocoMinutos;
-  detalhes.desvio_almoco_minutos = desvioAlmoco;
-  saldoTotalMinutos += desvioAlmoco;
+  // desvio da entrada em relação ao horário esperado
+  if (entrada) {
+    const esperada = combinarDataComHorario(entrada, horario_entrada);
+    detalhes.desvio_entrada_minutos = diferencaEmMinutos(entrada, esperada);
+  } else {
+    detalhes.desvio_entrada_minutos =
+      justificativaDe("entrada")!.status === "aprovada" ? 0 : PENALIDADE_RECUSA_MINUTOS;
+  }
+  saldoTotalMinutos += detalhes.desvio_entrada_minutos;
 
-  const entradaEsperada = combinarDataComHorario(entrada, horario_entrada);
-  const desvioEntrada = diferencaEmMinutos(entrada, entradaEsperada);
-  detalhes.desvio_entrada_minutos = desvioEntrada;
-  saldoTotalMinutos += desvioEntrada;
+  // desvio do almoço (duração real vs 60min esperados)
+  if (saidaAlmoco && retornoAlmoco) {
+    const duracao = diferencaEmMinutos(saidaAlmoco, retornoAlmoco);
+    detalhes.desvio_almoco_minutos = TOLERANCIA_ALMOCO_MINUTOS - duracao;
+  } else {
+    const j = justificativaDe("saida_almoco") ?? justificativaDe("retorno_almoco");
+    detalhes.desvio_almoco_minutos =
+      j?.status === "aprovada" ? 0 : PENALIDADE_RECUSA_MINUTOS;
+  }
+  saldoTotalMinutos += detalhes.desvio_almoco_minutos;
 
-  const saidaEsperada = combinarDataComHorario(saida, horario_saida);
-  const desvioSaida = diferencaEmMinutos(saidaEsperada, saida);
-  detalhes.desvio_saida_minutos = desvioSaida;
-  saldoTotalMinutos += desvioSaida;
+  // desvio da saída em relação ao horário esperado
+  if (saida) {
+    const esperada = combinarDataComHorario(saida, horario_saida);
+    detalhes.desvio_saida_minutos = diferencaEmMinutos(esperada, saida);
+  } else {
+    detalhes.desvio_saida_minutos =
+      justificativaDe("saida")!.status === "aprovada" ? 0 : PENALIDADE_RECUSA_MINUTOS;
+  }
+  saldoTotalMinutos += detalhes.desvio_saida_minutos;
 
+  // grava ou atualiza o registro do banco de horas daquele dia
   await client.query({
     text: `
       INSERT INTO banco_horas (empregado_id, data, saldo_minutos, detalhes)
-      VALUES ($1, CURRENT_DATE, $2, $3)
+      VALUES ($1, ${dataExpr}, $${dataRef === "CURRENT_DATE" ? 2 : 3}, $${dataRef === "CURRENT_DATE" ? 3 : 4})
       ON CONFLICT (empregado_id, data)
-      DO UPDATE SET saldo_minutos = $2, detalhes = $3
+      DO UPDATE SET saldo_minutos = EXCLUDED.saldo_minutos, detalhes = EXCLUDED.detalhes
     `,
-    values: [empregadoId, saldoTotalMinutos, JSON.stringify(detalhes)],
+    values:
+      dataRef === "CURRENT_DATE"
+        ? [empregadoId, saldoTotalMinutos, JSON.stringify(detalhes)]
+        : [empregadoId, dataRef, saldoTotalMinutos, JSON.stringify(detalhes)],
   });
 }
 
@@ -266,11 +253,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await database.query({
-      text: `
-        SELECT * FROM pontos
-        WHERE empregado_id = $1
-        ORDER BY criado_em DESC
-      `,
+      text: `SELECT * FROM pontos WHERE empregado_id = $1 ORDER BY criado_em DESC`,
       values: [empregado.id],
     });
 

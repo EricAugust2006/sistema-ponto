@@ -118,7 +118,7 @@ test("POST to /api/v1/ponto should reject punches out of logical sequence", asyn
   );
   expect(saidaAlmocoSemEntradaRes.status).toBe(400);
   const saidaAlmocoSemEntradaBody = await saidaAlmocoSemEntradaRes.json();
-  expect(saidaAlmocoSemEntradaBody.erro).toContain("Entrada");
+  expect(saidaAlmocoSemEntradaBody.erro).toContain("entrada");
 
   // Bater entrada com sucesso
   const entradaRes = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
