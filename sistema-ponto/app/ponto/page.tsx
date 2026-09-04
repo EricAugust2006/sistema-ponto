@@ -23,6 +23,7 @@ import {
   Utensils,
   X,
 } from "lucide-react";
+import Link from "next/link";
 
 type Empregado = {
   id: number;
@@ -819,13 +820,12 @@ export default function PontoPage() {
                                         justificativa,
                                       )
                                     }
-                                    className={`peer flex size-7 items-center justify-center rounded-full border font-bold transition hover:scale-110 active:scale-95 ${
-                                      justificativa.status === "aprovada"
+                                    className={`peer flex size-7 items-center justify-center rounded-full border font-bold transition hover:scale-110 active:scale-95 ${justificativa.status === "aprovada"
                                         ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
                                         : justificativa.status === "recusada"
                                           ? "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
                                           : "border-amber-400/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-                                    }`}
+                                      }`}
                                   >
                                     <AlertCircle className="size-4" />
                                   </button>
@@ -900,13 +900,12 @@ export default function PontoPage() {
             {/* badge de status quando há justificativa existente */}
             {modalJustificativa.justificativaExistente && !modoEdicao && (
               <div
-                className={`mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                  modalJustificativa.justificativaExistente.status === "aprovada"
+                className={`mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${modalJustificativa.justificativaExistente.status === "aprovada"
                     ? "bg-emerald-500/10 text-emerald-600"
                     : modalJustificativa.justificativaExistente.status === "recusada"
                       ? "bg-destructive/10 text-destructive"
                       : "bg-amber-500/10 text-amber-600"
-                }`}
+                  }`}
               >
                 <span className="size-1.5 rounded-full bg-current" />
                 {modalJustificativa.justificativaExistente.status === "aprovada"

@@ -14,7 +14,7 @@ const criarJustificativaSchema = z.object({
 });
 
 const atualizarJustificativaSchema = z.object({
-  id: z.number(),
+  id: z.coerce.number(),
   status: z.enum(["aprovada", "recusada"]),
   observacao: z.string().optional(),
 });
@@ -98,8 +98,15 @@ export async function GET(req: NextRequest) {
 // já que a decisão pode liberar (ou não) o cálculo do banco de horas.
 export async function PATCH(req: NextRequest) {
   const empregado = await autenticatorRequisicao(req);
-  if (!empregado || (empregado.papel !== "gestor" && empregado.papel !== "admin")) {
-    return NextResponse.json({ erro: "Acesso negado. Apenas gestores ou administradores." }, { status: 403 });
+  if (!empregado) {
+    return NextResponse.json({ erro: "Não Autorizado" }, { status: 401 });
+  }
+
+  if (empregado.papel !== "gestor" && empregado.papel !== "admin") {
+    return NextResponse.json(
+      { erro: "Acesso negado. Apenas gestores ou administradores." },
+      { status: 403 },
+    );
   }
 
   let client: PoolClient | undefined;

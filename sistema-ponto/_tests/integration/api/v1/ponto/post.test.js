@@ -224,3 +224,31 @@ test("closing the day (saida) should calculate banco_horas with correct entrada/
       registro.detalhes.desvio_saida_minutos,
   );
 });
+
+test("POST to /api/v1/ponto should block registering earlier punch when posterior punch was already registered", async () => {
+  const { cookie, empregadoId } = await criarEmpregadoELogar({
+    email: "trava.retroativa@example.com",
+    matricula: "111888",
+  });
+
+  // Insere diretamente um ponto de tipo posterior (saida_almoco)
+  await database.query({
+    text: `INSERT INTO pontos (empregado_id, tipo) VALUES ($1, 'saida_almoco')`,
+    values: [empregadoId],
+  });
+
+  // Tenta bater entrada (anterior a saida_almoco)
+  const res = await fetch("http://127.0.0.1:3000/api/v1/ponto", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookie,
+    },
+    body: JSON.stringify({ type: "entrada" }),
+  });
+
+  expect(res.status).toBe(400);
+  const body = await res.json();
+  expect(body.erro).toContain("Você já registrou um ponto posterior");
+});
+
