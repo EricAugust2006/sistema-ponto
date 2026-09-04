@@ -15,6 +15,7 @@ import {
   Loader2,
   LogOut,
   MessageSquarePlus,
+  ShieldCheck,
   Timer,
   TrendingDown,
   TrendingUp,
@@ -28,6 +29,7 @@ type Empregado = {
   nome: string;
   email: string;
   matricula: string;
+  papel?: "empregado" | "admin" | "gestor";
 };
 
 type Ponto = {
@@ -457,6 +459,17 @@ export default function PontoPage() {
                 {empregado?.matricula}
               </span>
             </div>
+
+            {(empregado?.papel === "gestor" || empregado?.papel === "admin") && (
+              <Link
+                href="/admin/justificativas"
+                className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-2 text-sm font-medium text-primary transition hover:bg-primary/20"
+                title="Painel Administrativo"
+              >
+                <ShieldCheck className="size-4" />
+                <span className="hidden sm:inline">Painel Admin</span>
+              </Link>
+            )}
 
             <button
               onClick={sair}
