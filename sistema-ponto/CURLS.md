@@ -56,10 +56,10 @@ Cria um novo funcionário no sistema com validação de dados e hash seguro de s
 curl -X POST http://localhost:3000/api/v1/empregados \
   -H "Content-Type: application/json" \
   -d '{
-    "nome": "João Silva",
-    "email": "joao.silva@empresa.com",
-    "matricula": "123456",
-    "senha": "senha123"
+    "nome": "Encarregado",
+    "email": "encarregado@ata.com",
+    "matricula": "123457",
+    "senha": "senha124"
   }'
 ```
 

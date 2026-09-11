@@ -203,8 +203,9 @@ export default function PontoPage() {
         setPontos(data);
         setMesSelecionado((atual) => atual ?? chaveDoMes(new Date()));
       }
-    } catch {
+    } catch (err) {
       // falha silenciosa em atualização de segundo plano
+      console.error("Erro ao buscar pontos:", err);
     }
   }, []);
 
@@ -309,7 +310,12 @@ export default function PontoPage() {
     justificativaExistente?: Justificativa,
   ) {
     const eNova = !justificativaExistente;
-    setModalJustificativa({ data: chaveDia, tipoPonto, rotulo, justificativaExistente });
+    setModalJustificativa({
+      data: chaveDia,
+      tipoPonto,
+      rotulo,
+      justificativaExistente,
+    });
     setMotivoTexto(justificativaExistente?.motivo ?? "");
     setModoEdicao(eNova); // se já existe, começa em modo visualização; se é nova, já em modo edição
     setErro(null);
@@ -461,7 +467,8 @@ export default function PontoPage() {
               </span>
             </div>
 
-            {(empregado?.papel === "gestor" || empregado?.papel === "admin") && (
+            {(empregado?.papel === "gestor" ||
+              empregado?.papel === "admin") && (
               <Link
                 href="/admin/justificativas"
                 className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-2 text-sm font-medium text-primary transition hover:bg-primary/20"
@@ -510,20 +517,20 @@ export default function PontoPage() {
               <p className="text-sm font-semibold capitalize">
                 {horaAtual
                   ? horaAtual.toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })
                   : "..."}
               </p>
               <p className="flex items-center gap-1 font-mono text-xs text-primary">
                 <Clock className="size-3" />
                 {horaAtual
                   ? horaAtual.toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })
                   : "--:--:--"}
               </p>
             </div>
@@ -532,12 +539,13 @@ export default function PontoPage() {
           {/* saldo total do banco de horas */}
           <div className="flex items-center gap-3.5 rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div
-              className={`flex size-10 items-center justify-center rounded-xl ${saldoPositivo
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : saldoNegativo
-                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                  : "bg-muted text-muted-foreground"
-                }`}
+              className={`flex size-10 items-center justify-center rounded-xl ${
+                saldoPositivo
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : saldoNegativo
+                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "bg-muted text-muted-foreground"
+              }`}
             >
               {saldoPositivo ? (
                 <TrendingUp className="size-5" />
@@ -550,12 +558,13 @@ export default function PontoPage() {
             <div>
               <p className="text-xs text-muted-foreground">Banco de horas</p>
               <p
-                className={`text-sm font-bold ${saldoPositivo
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : saldoNegativo
-                    ? "text-amber-600 dark:text-amber-400"
-                    : "text-foreground"
-                  }`}
+                className={`text-sm font-bold ${
+                  saldoPositivo
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : saldoNegativo
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-foreground"
+                }`}
               >
                 {bancoHoras ? formatarSaldo(saldoMinutos) : "0h 00m"}
               </p>
@@ -617,21 +626,23 @@ export default function PontoPage() {
                     key={valor}
                     onClick={() => baterPonto(valor)}
                     disabled={desabilitado}
-                    className={`group relative flex min-h-32 flex-col justify-between rounded-2xl border p-4 text-left transition-all ${jaRegistrado
-                      ? "cursor-default border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10"
-                      : ehProximo
-                        ? "cursor-pointer border-primary bg-card shadow-md ring-2 ring-primary/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10 active:translate-y-0"
-                        : "cursor-not-allowed border-border/60 bg-muted/20 opacity-50"
-                      }`}
+                    className={`group relative flex min-h-32 flex-col justify-between rounded-2xl border p-4 text-left transition-all ${
+                      jaRegistrado
+                        ? "cursor-default border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10"
+                        : ehProximo
+                          ? "cursor-pointer border-primary bg-card shadow-md ring-2 ring-primary/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10 active:translate-y-0"
+                          : "cursor-not-allowed border-border/60 bg-muted/20 opacity-50"
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <span
-                        className={`flex size-10 items-center justify-center rounded-xl transition ${jaRegistrado
-                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                          : ehProximo
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "bg-muted text-muted-foreground"
-                          }`}
+                        className={`flex size-10 items-center justify-center rounded-xl transition ${
+                          jaRegistrado
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            : ehProximo
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted text-muted-foreground"
+                        }`}
                       >
                         {estaCarregando ? (
                           <Loader2 className="size-5 animate-spin" />
@@ -767,8 +778,9 @@ export default function PontoPage() {
                     return (
                       <div
                         key={dia}
-                        className={`group grid grid-cols-[140px_repeat(4,1fr)] items-center border-b border-border/70 px-6 py-4 transition-colors last:border-0 hover:bg-muted/20 ${isHoje ? "bg-primary/5" : ""
-                          }`}
+                        className={`group grid grid-cols-[140px_repeat(4,1fr)] items-center border-b border-border/70 px-6 py-4 transition-colors last:border-0 hover:bg-muted/20 ${
+                          isHoje ? "bg-primary/5" : ""
+                        }`}
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-foreground">
@@ -820,17 +832,22 @@ export default function PontoPage() {
                                         justificativa,
                                       )
                                     }
-                                    className={`peer flex size-7 items-center justify-center rounded-full border font-bold transition hover:scale-110 active:scale-95 ${justificativa.status === "aprovada"
+                                    className={`peer flex size-7 items-center justify-center rounded-full border font-bold transition hover:scale-110 active:scale-95 ${
+                                      justificativa.status === "aprovada"
                                         ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
                                         : justificativa.status === "recusada"
                                           ? "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
                                           : "border-amber-400/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-                                      }`}
+                                    }`}
                                   >
                                     <AlertCircle className="size-4" />
                                   </button>
                                   <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-medium text-foreground shadow-lg opacity-0 transition-opacity duration-150 peer-hover:opacity-100">
-                                    {justificativa.status === "aprovada" ? "Aprovada — clique para ver" : justificativa.status === "recusada" ? "Recusada — clique para ver" : "Pendente — clique para editar"}
+                                    {justificativa.status === "aprovada"
+                                      ? "Aprovada — clique para ver"
+                                      : justificativa.status === "recusada"
+                                        ? "Recusada — clique para ver"
+                                        : "Pendente — clique para editar"}
                                     <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-border" />
                                   </div>
                                 </div>
@@ -872,7 +889,9 @@ export default function PontoPage() {
       {modalJustificativa && (
         <div
           className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
-          onClick={(e) => e.target === e.currentTarget && fecharModalJustificativa()}
+          onClick={(e) =>
+            e.target === e.currentTarget && fecharModalJustificativa()
+          }
         >
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl">
             {/* cabeçalho */}
@@ -900,17 +919,21 @@ export default function PontoPage() {
             {/* badge de status quando há justificativa existente */}
             {modalJustificativa.justificativaExistente && !modoEdicao && (
               <div
-                className={`mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${modalJustificativa.justificativaExistente.status === "aprovada"
+                className={`mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                  modalJustificativa.justificativaExistente.status ===
+                  "aprovada"
                     ? "bg-emerald-500/10 text-emerald-600"
-                    : modalJustificativa.justificativaExistente.status === "recusada"
+                    : modalJustificativa.justificativaExistente.status ===
+                        "recusada"
                       ? "bg-destructive/10 text-destructive"
                       : "bg-amber-500/10 text-amber-600"
-                  }`}
+                }`}
               >
                 <span className="size-1.5 rounded-full bg-current" />
                 {modalJustificativa.justificativaExistente.status === "aprovada"
                   ? "Aprovada"
-                  : modalJustificativa.justificativaExistente.status === "recusada"
+                  : modalJustificativa.justificativaExistente.status ===
+                      "recusada"
                     ? "Recusada"
                     : "Aguardando análise"}
               </div>
@@ -932,30 +955,32 @@ export default function PontoPage() {
               </div>
             )}
 
-            {erro && (
-              <p className="mt-2 text-xs text-destructive">{erro}</p>
-            )}
+            {erro && <p className="mt-2 text-xs text-destructive">{erro}</p>}
 
             <div className="mt-4 flex justify-end gap-2">
               {/* modo leitura com justificativa pendente → botão editar */}
-              {!modoEdicao && modalJustificativa.justificativaExistente?.status === "pendente" && (
-                <button
-                  onClick={() => {
-                    setModoEdicao(true);
-                    setErro(null);
-                  }}
-                  className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
-                  Editar
-                </button>
-              )}
+              {!modoEdicao &&
+                modalJustificativa.justificativaExistente?.status ===
+                  "pendente" && (
+                  <button
+                    onClick={() => {
+                      setModoEdicao(true);
+                      setErro(null);
+                    }}
+                    className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    Editar
+                  </button>
+                )}
 
               {/* modo edição com justificativa existente → cancelar edição (volta a ver) */}
               {modoEdicao && modalJustificativa.justificativaExistente ? (
                 <button
                   onClick={() => {
                     setModoEdicao(false);
-                    setMotivoTexto(modalJustificativa.justificativaExistente!.motivo);
+                    setMotivoTexto(
+                      modalJustificativa.justificativaExistente!.motivo,
+                    );
                     setErro(null);
                   }}
                   className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
@@ -978,8 +1003,12 @@ export default function PontoPage() {
                   disabled={enviandoJustificativa}
                   className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
                 >
-                  {enviandoJustificativa && <Loader2 className="size-4 animate-spin" />}
-                  {modalJustificativa.justificativaExistente ? "Salvar alteração" : "Enviar"}
+                  {enviandoJustificativa && (
+                    <Loader2 className="size-4 animate-spin" />
+                  )}
+                  {modalJustificativa.justificativaExistente
+                    ? "Salvar alteração"
+                    : "Enviar"}
                 </button>
               )}
             </div>

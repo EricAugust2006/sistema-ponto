@@ -10,20 +10,10 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-
-type StatusJustificativa = "pendente" | "aprovada" | "recusada";
-
-type Justificativa = {
-  id: number;
-  empregado_id: number;
-  empregado_nome: string;
-  matricula: string;
-  data: string;
-  tipo_ponto: string;
-  motivo: string;
-  status: StatusJustificativa;
-  observacao_analise: string | null;
-};
+import {
+  agruparJustificativas,
+  type Justificativa,
+} from "@/app/lib/admin-justifications";
 
 const ROTULOS_TIPO: Record<string, string> = {
   entrada: "Entrada",
@@ -113,6 +103,11 @@ export default function AdminJustificativasPage() {
     if (filtro === "todas") return justificativas;
     return justificativas.filter((j) => j.status === filtro);
   }, [justificativas, filtro]);
+
+  const grupos = useMemo(
+    () => agruparJustificativas(listaFiltrada),
+    [listaFiltrada],
+  );
 
   const contagemPendentes = useMemo(
     () => justificativas.filter((j) => j.status === "pendente").length,
@@ -228,78 +223,94 @@ export default function AdminJustificativasPage() {
             </div>
           ) : (
             <div className="divide-y divide-border/70">
-              {listaFiltrada.map((j) => (
-                <div key={j.id} className="flex flex-col gap-3 px-6 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">
-                        {j.empregado_nome}{" "}
-                        <span className="font-normal text-muted-foreground">
-                          (matrícula {j.matricula})
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {ROTULOS_TIPO[j.tipo_ponto] ?? j.tipo_ponto} — dia{" "}
-                        {formatarData(j.data)}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        j.status === "aprovada"
-                          ? "bg-emerald-500/10 text-emerald-600"
-                          : j.status === "recusada"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/10 text-amber-600"
-                      }`}
-                    >
-                      {j.status === "pendente"
-                        ? "Pendente"
-                        : j.status === "aprovada"
-                          ? "Aprovada"
-                          : "Recusada"}
+              {grupos.map((grupo) => (
+                <section key={grupo.empregadoId} className="px-6 py-5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="text-base font-semibold">{grupo.nome}</h2>
+                    <span className="text-xs text-muted-foreground">
+                      Matrícula {grupo.matricula}
                     </span>
                   </div>
 
-                  <p className="rounded-xl bg-muted/40 px-3 py-2 text-sm text-foreground">
-                    {j.motivo}
-                  </p>
+                  <div className="mt-4 space-y-5">
+                    {grupo.meses.map((mes) => (
+                      <div key={mes.chave}>
+                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {mes.rotulo}
+                        </h3>
+                        <div className="divide-y divide-border/70 rounded-xl border border-border/70">
+                          {mes.justificativas.map((j) => (
+                            <div key={j.id} className="flex flex-col gap-3 px-4 py-4">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-semibold">
+                                    {ROTULOS_TIPO[j.tipo_ponto] ?? j.tipo_ponto} — dia{" "}
+                                    {formatarData(j.data)}
+                                  </p>
+                                </div>
 
-                  {j.observacao_analise && (
-                    <p className="text-xs text-muted-foreground">
-                      Observação do gestor: {j.observacao_analise}
-                    </p>
-                  )}
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                    j.status === "aprovada"
+                                      ? "bg-emerald-500/10 text-emerald-600"
+                                      : j.status === "recusada"
+                                        ? "bg-destructive/10 text-destructive"
+                                        : "bg-amber-500/10 text-amber-600"
+                                  }`}
+                                >
+                                  {j.status === "pendente"
+                                    ? "Pendente"
+                                    : j.status === "aprovada"
+                                      ? "Aprovada"
+                                      : "Recusada"}
+                                </span>
+                              </div>
 
-                  {j.status === "pendente" && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => analisar(j.id, "aprovada")}
-                        disabled={processandoId !== null}
-                        className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-                      >
-                        {processandoId === j.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Check className="size-3.5" />
-                        )}
-                        Aprovar
-                      </button>
-                      <button
-                        onClick={() => analisar(j.id, "recusada")}
-                        disabled={processandoId !== null}
-                        className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3.5 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
-                      >
-                        {processandoId === j.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <X className="size-3.5" />
-                        )}
-                        Recusar
-                      </button>
-                    </div>
-                  )}
-                </div>
+                              <p className="rounded-xl bg-muted/40 px-3 py-2 text-sm text-foreground">
+                                {j.motivo}
+                              </p>
+
+                              {j.observacao_analise && (
+                                <p className="text-xs text-muted-foreground">
+                                  Observação do gestor: {j.observacao_analise}
+                                </p>
+                              )}
+
+                              {j.status === "pendente" && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => analisar(j.id, "aprovada")}
+                                    disabled={processandoId !== null}
+                                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                                  >
+                                    {processandoId === j.id ? (
+                                      <Loader2 className="size-3.5 animate-spin" />
+                                    ) : (
+                                      <Check className="size-3.5" />
+                                    )}
+                                    Aprovar
+                                  </button>
+                                  <button
+                                    onClick={() => analisar(j.id, "recusada")}
+                                    disabled={processandoId !== null}
+                                    className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3.5 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
+                                  >
+                                    {processandoId === j.id ? (
+                                      <Loader2 className="size-3.5 animate-spin" />
+                                    ) : (
+                                      <X className="size-3.5" />
+                                    )}
+                                    Recusar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           )}

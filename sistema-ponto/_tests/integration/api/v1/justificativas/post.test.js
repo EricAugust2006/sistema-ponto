@@ -113,6 +113,49 @@ test("POST to /api/v1/justificativas should block future dates (400)", async () 
   expect(body.erro).toContain("Não é possível criar justificativa para datas futuras");
 });
 
+test("POST to /api/v1/justificativas should reject a late replacement without changing the record", async () => {
+  const { cookie, empregadoId } = await criarEmpregadoELogar({
+    email: "just.atrasada@example.com",
+    matricula: "888999",
+  });
+  const dataEncerrada = "2026-08-01";
+
+  const existing = await database.query({
+    text: `
+      INSERT INTO justificativas_ponto (empregado_id, data, tipo_ponto, motivo, status)
+      VALUES ($1, $2, $3, $4, 'aprovada')
+      RETURNING id
+    `,
+    values: [empregadoId, dataEncerrada, "entrada", "Justificativa original aprovada"],
+  });
+
+  const res = await fetch("http://127.0.0.1:3000/api/v1/justificativas", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookie,
+    },
+    body: JSON.stringify({
+      data: dataEncerrada,
+      tipoPonto: "entrada",
+      motivo: "Tentativa de alterar justificativa depois do prazo",
+    }),
+  });
+
+  expect(res.status).toBe(400);
+  const body = await res.json();
+  expect(body.erro).toContain("prazo");
+
+  const unchanged = await database.query({
+    text: "SELECT motivo, status FROM justificativas_ponto WHERE id = $1",
+    values: [existing.rows[0].id],
+  });
+  expect(unchanged.rows[0]).toEqual({
+    motivo: "Justificativa original aprovada",
+    status: "aprovada",
+  });
+});
+
 test("POST to /api/v1/justificativas with short reason or invalid type should return 400", async () => {
   const { cookie } = await criarEmpregadoELogar({
     email: "just.invalida@example.com",

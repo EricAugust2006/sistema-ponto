@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { autenticatorRequisicao } from "@/_infra/auth";
 import database from "@/_infra/database.js";
 import { tentarFecharDia } from "@/app/api/v1/ponto/route";
+import { prazoJustificativaExpirado } from "@/app/lib/justification-deadline";
 import z from "zod";
 import type { PoolClient } from "pg";
 
@@ -36,6 +37,13 @@ export async function POST(req: NextRequest) {
     if (body.data > hoje) {
       return NextResponse.json(
         { erro: "Não é possível criar justificativa para datas futuras." },
+        { status: 400 },
+      );
+    }
+
+    if (prazoJustificativaExpirado(body.data, hoje)) {
+      return NextResponse.json(
+        { erro: "O prazo para criar ou alterar esta justificativa já passou." },
         { status: 400 },
       );
     }
