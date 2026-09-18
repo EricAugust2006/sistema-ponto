@@ -9,6 +9,7 @@ Este documento contém todos os comandos `cURL` organizados por módulo para tes
 ## 📌 Dicas Importantes para Execução
 
 ### No Windows (PowerShell / CMD)
+
 - No PowerShell, use `curl.exe` em vez de `curl` (para evitar conflito com o alias do `Invoke-WebRequest`).
 - Para comandos em linha única ou que usam JSON, utilize aspas duplas com escape ou strings simples formatadas.
 - Para gerenciar cookies de sessão automaticamente entre requisições:
@@ -16,6 +17,7 @@ Este documento contém todos os comandos `cURL` organizados por módulo para tes
   - `-b cookies.txt` -> Envia os cookies salvos nas requisições autenticadas.
 
 ### No Linux / macOS / Git Bash
+
 - Pode utilizar `curl` normalmente com quebras de linha usando `\`.
 
 ---
@@ -50,20 +52,22 @@ Este documento contém todos os comandos `cURL` organizados por módulo para tes
 ## 1. Autenticação e Empregados
 
 ### 1.1 Cadastrar Novo Empregado
+
 Cria um novo funcionário no sistema com validação de dados e hash seguro de senha.
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/empregados \
   -H "Content-Type: application/json" \
   -d '{
-    "nome": "Encarregado",
-    "email": "encarregado@ata.com",
-    "matricula": "123457",
-    "senha": "senha124"
+    "nome": "João Silva",
+    "email": "joao.silva@empresa.com",
+    "matricula": "123456",
+    "senha": "senha123"
   }'
 ```
 
 **Exemplo PowerShell (linha única):**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/empregados -H "Content-Type: application/json" -d '{\"nome\": \"João Silva\", \"email\": \"joao.silva@empresa.com\", \"matricula\": \"123456\", \"senha\": \"senhaSegura123\"}'
 ```
@@ -71,6 +75,7 @@ curl.exe -X POST http://localhost:3000/api/v1/empregados -H "Content-Type: appli
 ---
 
 ### 1.2 Consultar Empregados Cadastrados no Banco
+
 Retorna a lista de todos os usuários/empregados cadastrados no banco de dados (dados públicos/cadastrais, sem expor hash de senha).
 
 ```bash
@@ -78,11 +83,13 @@ curl -X GET http://localhost:3000/api/v1/empregados
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X GET http://localhost:3000/api/v1/empregados
 ```
 
 **Exemplo de Resposta:**
+
 ```json
 [
   {
@@ -101,6 +108,7 @@ curl.exe -X GET http://localhost:3000/api/v1/empregados
 ---
 
 ### 1.3 Login / Criar Sessão
+
 Autentica o funcionário e gera o cookie `session_token`.
 
 ```bash
@@ -115,6 +123,7 @@ curl -X POST http://localhost:3000/api/v1/sessoes \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/sessoes -c cookies.txt -H "Content-Type: application/json" -d '{\"matricula\": \"123456\", \"senha\": \"senhaSegura123\"}'
 ```
@@ -122,6 +131,7 @@ curl.exe -X POST http://localhost:3000/api/v1/sessoes -c cookies.txt -H "Content
 ---
 
 ### 1.4 Consultar Sessão Ativa
+
 Verifica os dados do empregado atualmente logado com base no cookie de sessão.
 
 ```bash
@@ -135,6 +145,7 @@ curl -X GET http://localhost:3000/api/v1/sessoes \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X GET http://localhost:3000/api/v1/sessoes -b cookies.txt
 ```
@@ -142,8 +153,8 @@ curl.exe -X GET http://localhost:3000/api/v1/sessoes -b cookies.txt
 ---
 
 ### 1.5 Logout / Encerrar Sessão
-Invalida o token no banco de dados e remove o cookie.
 
+Invalida o token no banco de dados e remove o cookie.
 
 ```bash
 curl -X DELETE http://localhost:3000/api/v1/sessoes \
@@ -151,6 +162,7 @@ curl -X DELETE http://localhost:3000/api/v1/sessoes \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X DELETE http://localhost:3000/api/v1/sessoes -b cookies.txt
 ```
@@ -163,6 +175,7 @@ curl.exe -X DELETE http://localhost:3000/api/v1/sessoes -b cookies.txt
 > Cada tipo de ponto só pode ser batido **uma vez ao dia**.
 
 ### 2.1 Bater Ponto - Entrada
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/ponto \
   -b cookies.txt \
@@ -173,6 +186,7 @@ curl -X POST http://localhost:3000/api/v1/ponto \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-Type: application/json" -d '{\"type\": \"entrada\"}'
 ```
@@ -180,6 +194,7 @@ curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-T
 ---
 
 ### 2.2 Bater Ponto - Saída Almoço
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/ponto \
   -b cookies.txt \
@@ -190,6 +205,7 @@ curl -X POST http://localhost:3000/api/v1/ponto \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-Type: application/json" -d '{\"type\": \"saida_almoco\"}'
 ```
@@ -197,6 +213,7 @@ curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-T
 ---
 
 ### 2.3 Bater Ponto - Retorno Almoço
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/ponto \
   -b cookies.txt \
@@ -207,6 +224,7 @@ curl -X POST http://localhost:3000/api/v1/ponto \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-Type: application/json" -d '{\"type\": \"retorno_almoco\"}'
 ```
@@ -214,6 +232,7 @@ curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-T
 ---
 
 ### 2.4 Bater Ponto - Saída (Fechamento do Dia)
+
 > Ao registrar a `saida`, se as outras 3 batidas do dia existirem, o sistema calcula e atualiza automaticamente o saldo do **Banco de Horas**.
 
 ```bash
@@ -226,6 +245,7 @@ curl -X POST http://localhost:3000/api/v1/ponto \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-Type: application/json" -d '{\"type\": \"saida\"}'
 ```
@@ -233,6 +253,7 @@ curl.exe -X POST http://localhost:3000/api/v1/ponto -b cookies.txt -H "Content-T
 ---
 
 ### 2.5 Listar Histórico de Pontos
+
 Retorna todas as batidas do funcionário autenticado em ordem decrescente de data.
 
 ```bash
@@ -241,6 +262,7 @@ curl -X GET http://localhost:3000/api/v1/ponto \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X GET http://localhost:3000/api/v1/ponto -b cookies.txt
 ```
@@ -250,6 +272,7 @@ curl.exe -X GET http://localhost:3000/api/v1/ponto -b cookies.txt
 ## 3. Banco de Horas
 
 ### 3.1 Consultar Saldo e Registros do Banco de Horas
+
 Retorna o saldo acumulado total (em minutos) e o extrato diário detalhando desvios de entrada, almoço e saída.
 
 ```bash
@@ -258,11 +281,13 @@ curl -X GET http://localhost:3000/api/v1/banco-horas \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X GET http://localhost:3000/api/v1/banco-horas -b cookies.txt
 ```
 
 **Exemplo de Resposta:**
+
 ```json
 {
   "saldoTotalMinutos": 15,
@@ -285,6 +310,7 @@ curl.exe -X GET http://localhost:3000/api/v1/banco-horas -b cookies.txt
 ## 4. Justificativas de Ponto
 
 ### 4.1 Criar uma Justificativa de Ponto
+
 Permite ao funcionário justificar a ausência ou esquecimento de uma batida de ponto passada (data <= hoje).
 
 - `tipoPonto`: `"entrada"`, `"saida_almoco"`, `"retorno_almoco"` ou `"saida"`.
@@ -302,6 +328,7 @@ curl -X POST http://localhost:3000/api/v1/justificativas \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/justificativas -b cookies.txt -H "Content-Type: application/json" -d '{\"data\": \"2026-08-28\", \"tipoPonto\": \"entrada\", \"motivo\": \"Consulta médica de rotina no início da manhã. Atestado entregue ao RH.\"}'
 ```
@@ -309,6 +336,7 @@ curl.exe -X POST http://localhost:3000/api/v1/justificativas -b cookies.txt -H "
 ---
 
 ### 4.2 Listar Justificativas
+
 - Se autenticado como **funcionário**: retorna apenas as próprias justificativas.
 - Se autenticado como **gestor** ou **admin**: retorna todas as justificativas do sistema.
 
@@ -318,6 +346,7 @@ curl -X GET http://localhost:3000/api/v1/justificativas \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X GET http://localhost:3000/api/v1/justificativas -b cookies.txt
 ```
@@ -325,6 +354,7 @@ curl.exe -X GET http://localhost:3000/api/v1/justificativas -b cookies.txt
 ---
 
 ### 4.3 Aprovar ou Recusar Justificativa
+
 > **Restrito:** Exige usuário com papel `gestor` ou `admin`.
 
 - `status`: `"aprovada"` ou `"recusada"`.
@@ -342,6 +372,7 @@ curl -X PATCH http://localhost:3000/api/v1/justificativas \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X PATCH http://localhost:3000/api/v1/justificativas -b cookies.txt -H "Content-Type: application/json" -d '{\"id\": 1, \"status\": \"aprovada\", \"observacao\": \"Atestado médico validado.\"}'
 ```
@@ -351,6 +382,7 @@ curl.exe -X PATCH http://localhost:3000/api/v1/justificativas -b cookies.txt -H 
 ## 5. Status e Infraestrutura
 
 ### 5.1 Verificar Saúde da API e do Banco
+
 Retorna versão do PostgreSQL, número de conexões abertas e status geral.
 
 ```bash
@@ -358,6 +390,7 @@ curl -X GET http://localhost:3000/api/v1/status
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X GET http://localhost:3000/api/v1/status
 ```
@@ -365,6 +398,7 @@ curl.exe -X GET http://localhost:3000/api/v1/status
 ---
 
 ### 5.2 Listar Migrations Pendentes
+
 > Requer o cabeçalho `x-admin-key` com o valor configurado em `ADMIN_KEY` no arquivo `.env`.
 
 ```bash
@@ -373,6 +407,7 @@ curl -X GET http://localhost:3000/api/v1/migrations \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X GET http://localhost:3000/api/v1/migrations -H "x-admin-key: 001001001ADMIN_KEY=chave-secreta-de-desenvolvimento"
 ```
@@ -380,6 +415,7 @@ curl.exe -X GET http://localhost:3000/api/v1/migrations -H "x-admin-key: 0010010
 ---
 
 ### 5.3 Executar Migrations Pendentes
+
 Aplica as migrations no banco de dados.
 
 ```bash
@@ -388,6 +424,7 @@ curl -X POST http://localhost:3000/api/v1/migrations \
 ```
 
 **Exemplo PowerShell:**
+
 ```powershell
 curl.exe -X POST http://localhost:3000/api/v1/migrations -H "x-admin-key: 001001001ADMIN_KEY=chave-secreta-de-desenvolvimento"
 ```
@@ -445,42 +482,44 @@ curl -X DELETE http://localhost:3000/api/v1/sessoes -b cookies.txt
 Caso você queira consultar os registros diretamente no banco de dados via Docker:
 
 ### 1. Listar todos os empregados cadastrados
+
 ```powershell
 docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto -c "SELECT id, nome, email, matricula, papel, horario_entrada, horario_saida, criado_em FROM empregados;"
 ```
 
 ### 2. Listar empregados com sessão ativa no momento
+
 ```powershell
 docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto -c "SELECT e.id, e.nome, e.email, e.matricula, e.papel, s.expira_em FROM empregados e JOIN sessoes s ON s.empregado_id = e.id WHERE s.expira_em > NOW();"
 ```
 
 ### 3. Acessar o terminal interativo do PostgreSQL (`psql`)
+
 ```powershell
 docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto
 ```
-*Comandos úteis dentro do `psql`:*
+
+_Comandos úteis dentro do `psql`:_
+
 - `\dt` -> Lista todas as tabelas do banco.
 - `SELECT * FROM empregados;` -> Consulta todos os dados da tabela.
 - `\q` -> Sai do `psql`.
 
-
 =====
 
 1. 📋 Consultar todos os empregados cadastrados (Comando direto no terminal)
-Execute no seu terminal PowerShell ou CMD:
+   Execute no seu terminal PowerShell ou CMD:
 
 powershell
 docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto -c "SELECT id, nome, email, matricula, papel, horario_entrada, horario_saida, criado_em FROM empregados;"
 Ou para ver todas as colunas:
 
 powershell
-docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto -c "SELECT * FROM empregados;"
-2. 🟢 Consultar empregados que estão com sessão ativa no momento
+docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto -c "SELECT \* FROM empregados;" 2. 🟢 Consultar empregados que estão com sessão ativa no momento
 Para ver quem está logado com sessão válida:
 
 powershell
-docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto -c "SELECT e.id, e.nome, e.email, e.matricula, e.papel, s.expira_em FROM empregados e JOIN sessoes s ON s.empregado_id = e.id WHERE s.expira_em > NOW();"
-3. 💻 Entrar no terminal interativo do PostgreSQL (psql)
+docker exec -it sistema-ponto-database psql -U postgres -d sistema_ponto -c "SELECT e.id, e.nome, e.email, e.matricula, e.papel, s.expira_em FROM empregados e JOIN sessoes s ON s.empregado_id = e.id WHERE s.expira_em > NOW();" 3. 💻 Entrar no terminal interativo do PostgreSQL (psql)
 Se preferir abrir o console do PostgreSQL e digitar as queries interativamente:
 
 powershell
@@ -491,8 +530,8 @@ sql
 -- 1. Ver lista de tabelas
 \dt
 -- 2. Consultar os empregados
-SELECT * FROM empregados;
+SELECT _ FROM empregados;
 -- 3. Consultar as batidas de ponto
-SELECT * FROM pontos;
+SELECT _ FROM pontos;
 -- 4. Sair do psql
 \q
