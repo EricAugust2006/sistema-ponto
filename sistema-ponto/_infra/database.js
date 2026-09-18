@@ -1,5 +1,7 @@
 import { Pool } from "pg";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   host: process.env.POSTGRES_HOST,
@@ -8,9 +10,11 @@ const pool = new Pool({
   password: process.env.POSTGRES_PASSWORD,
   database: process.env.POSTGRES_DB,
   allowExitOnIdle: true,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl: isProduction
+    ? {
+        rejectUnauthorized: false,
+      }
+    : false,
 });
 
 async function query(queryObject) {
